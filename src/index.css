@@ -70,6 +70,33 @@ button:focus-visible {
   }
 } */
 
+/* Custom Scrollbar Styles */
+/* Works for Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 6px; /* Thin scrollbar width */
+  height: 6px; /* For horizontal scrollbars */
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Track color */
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bdee6f; /* Green color */
+  border-radius: 3px; /* Rounded corners */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #bdee6f; /* Darker green on hover */
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #bdee6f #f1f1f1;
+}
+
 a{
   text-decoration: none !important;
 }

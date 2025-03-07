@@ -9,17 +9,23 @@ interface DesktopLayoutProps {
 
 export default function DesktopLayout({ children }: DesktopLayoutProps) {
   return (
-    <div className="min-h-screen grid grid-cols-[auto_1fr_auto]">
-      {/* Left Navbar */}
-      <Navbar />
+    <div className="min-h-screen grid grid-cols-[240px_1fr_300px] bg-gray-100">
+      {/* Left Navbar - Fixed width */}
+      <div className="h-screen sticky top-0">
+        <Navbar />
+      </div>
       
-      {/* Main Content */}
-      <main className="mx-auto w-full max-w-5xl px-4 py-8">
-        {children}
+      {/* Main Content - Flexible middle column */}
+      <main className="overflow-y-auto h-screen py-6">
+        <div className="max-w-7xl mx-auto">
+          {children}
+        </div>
       </main>
       
-      {/* Right Aside */}
-      <Aside />
+      {/* Right Aside - Fixed width */}
+      <div className="h-screen sticky top-0">
+        <Aside />
+      </div>
     </div>
   );
 }
