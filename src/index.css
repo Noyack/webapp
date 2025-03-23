@@ -259,6 +259,12 @@ a{
   width: calc(min(330px, 80%));
   border-radius: 5px;
 }
+.sign-in-button{
+  background-color: #011E5A;
+  color: #fff;
+  width: calc(min(330px, 80%));
+  border-radius: 5px;
+}
 
 .form-aside{
   background-color: #fff;

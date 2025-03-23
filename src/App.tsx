@@ -2,7 +2,8 @@ import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import DesktopLayout from "./components/Layout/DesktopLayout";
 import AppRoutes from "./routes";
-import SignInPage from "./pages/SignInPage";
+// import SignInPage from "./pages/Auth/SignInPage";
+import AuthPage from "./pages/Auth/AuthPage";
 import Creation from "./pages/Creation";
 import useApiServices from "./hooks/useApiServices";
 
@@ -47,7 +48,7 @@ export default function App() {
   return (
     <header>
       <SignedOut>
-        <SignInPage />
+        <AuthPage />
       </SignedOut>
       <SignedIn>
         {isNew ? (

@@ -486,3 +486,12 @@ export interface EventItem {
   location: string;
   description: string;
 }
+
+
+// ======================
+// CLERCK ERRORS
+// ======================
+
+export interface ClerkError {
+  errors?: Array<{ message: string }>;
+}
