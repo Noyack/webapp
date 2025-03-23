@@ -82,7 +82,7 @@ const RetiermentCalc = () => {
                 type="number"
                 value={initialInvestment}
                 onChange={(e) => setInitialInvestment(Number(e.target.value))}
-                className="w-full p-2 border-b-2 border-gray-200 focus:border-[#bdee6f]"
+                className="w-full p-2 border-b-2 border-gray-200 focus:border-[#2E7D32]"
               />
             </div>
           </div>
@@ -95,7 +95,7 @@ const RetiermentCalc = () => {
                 type="number"
                 value={monthlyInvestment}
                 onChange={(e) => setMonthlyInvestment(Number(e.target.value))}
-                className="w-full p-2 border-b-2 border-gray-200 focus:border-[#bdee6f]"
+                className="w-full p-2 border-b-2 border-gray-200 focus:border-[#2E7D32]"
               />
             </div>
           </div>
@@ -108,7 +108,7 @@ const RetiermentCalc = () => {
                 type="number"
                 value={years}
                 onChange={(e) => setYears(Number(e.target.value))}
-                className="w-full p-2 border-b-2 border-gray-200 focus:border-[#bdee6f]"
+                className="w-full p-2 border-b-2 border-gray-200 focus:border-[#2E7D32]"
               />
             </div>
           </div>
@@ -126,7 +126,7 @@ const RetiermentCalc = () => {
           <div className="grid grid-cols-2 gap-4">
             {[12, 22].map((months) => (
               <div key={months} className="p-4 border rounded-lg">
-                <div className="text-lg font-bold text-green-600">
+                <div className="text-lg font-bold text-[#2E7D32]">
                   ${((initialInvestment + monthlyInvestment * months)).toLocaleString()}
                 </div>
                 <div className="text-sm text-gray-500">{months} months</div>
@@ -136,7 +136,7 @@ const RetiermentCalc = () => {
 
           <button
             onClick={calculateRetirement}
-            className="w-full bg-[#bdee6f] text-black py-3 rounded-lg hover:bg-[#7eee6f] cursor-pointer
+            className="w-full bg-[#2E7D32] text-white py-3 rounded-lg hover:bg-[#304d2c] cursor-pointer
                      flex items-center justify-center gap-2"
           >
             <Calculate />

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ClerkProvider } from '@clerk/clerk-react'
-import { BrowserRouter } from 'react-router'
+import { BrowserRouter } from 'react-router-dom' // Fixed import from react-router-dom
 import { CssBaseline, StyledEngineProvider } from "@mui/material";
 
 // Import your Publishable Key
@@ -16,13 +16,12 @@ if (!PUBLISHABLE_KEY) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl={"/"}>
-    <BrowserRouter>
-    <StyledEngineProvider injectFirst>
-
-    <CssBaseline />
-      <App />
-    </StyledEngineProvider>
-    </BrowserRouter>
+      <BrowserRouter>
+        <StyledEngineProvider injectFirst>
+          <CssBaseline />
+          <App />
+        </StyledEngineProvider>
+      </BrowserRouter>
     </ClerkProvider>
   </StrictMode>,
 )

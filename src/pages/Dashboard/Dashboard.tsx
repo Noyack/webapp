@@ -1,36 +1,17 @@
-import { DashboardSearch } from "../../components/UI/SearchInput"
 import { AccountBalance, AttachMoney, LocalAtmOutlined } from "@mui/icons-material"
 import { ReactNode, useState } from "react";
-import FundSatus from "./components/FundSatus";
-import RetiermentCalc from "./components/RetiermentCalc";
+import FundStatus from "./components/FundSatus";
+import RetirementCalc from "./components/RetiermentCalc";
 import Community from "./components/Community";
 import FIRECalculator from "./components/FIRECalculator";
 import { Box, Tab, Tabs } from "@mui/material";
+import Aside from "../../components/Layout/Aside";
+import { FundStatusElement } from "../../types";
 
-export type FundStatusProp = {
-  title: string;
-  value: string;
-  icon: ReactNode
-}
-const statusElements:FundStatusProp[] = [
-  {
-    title:" Distribution Last quarter",
-    value:"$565,541",
-    icon: <AccountBalance sx={{height:"15px",  color:"#fff"}}/>
-  },
-  {
-    title:"Target Annial Returns",
-    value:"12-15%",
-    icon: <AttachMoney  sx={{height:"15px",  color:"#fff"}}/>
-  },
-  {
-    title:"Resident Impact",
-    value:"$756k+",
-    icon: <LocalAtmOutlined  sx={{height:"15px",  color:"#fff"}}/>
-  }
-]
+
+// Define type for tab panel props
 interface TabPanelProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   index: number;
   value: number;
 }
@@ -59,28 +40,55 @@ function a11yProps(index: number) {
 }
 
 const Dashboard = () => {
-  const [value, setValue] = useState(0);
+  const [value, setValue] = useState<number>(0);
 
-  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
+  // Ensure statusElements has a consistent structure with IDs
+  const statusElements: FundStatusElement[] = [
+    {
+      id: 1,
+      title: "Distribution Last quarter",
+      value: "$565,541",
+      icon: <AccountBalance sx={{height:"15px", color:"#fff"}}/>
+    },
+    {
+      id: 2,
+      title: "Target Annual Returns",
+      value: "12-15%",
+      icon: <AttachMoney sx={{height:"15px", color:"#fff"}}/>
+    },
+    {
+      id: 3,
+      title: "Resident Impact",
+      value: "$756k+",
+      icon: <LocalAtmOutlined sx={{height:"15px", color:"#fff"}}/>
+    }
+  ];
+
+  const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
   };
+
   return (
-    <div className="flex flex-col gap-10 px-2">
-      <DashboardSearch />
-      <FundSatus statusElements={statusElements} />
-      <Tabs value={value} onChange={handleChange} aria-label="basic tabs example">
+    <div className="flex">
+      <div className="flex flex-col gap-10 px-2">
+        <FundStatus statusElements={statusElements} />
+        <Tabs value={value} onChange={handleChange} aria-label="financial calculators tabs">
           <Tab label="Retirement Projection" {...a11yProps(0)} />
           <Tab label="FIRE Calculator" {...a11yProps(1)} />
         </Tabs>
         <CustomTabPanel value={value} index={0}>
-      <RetiermentCalc />
-      </CustomTabPanel>
+          <RetirementCalc />
+        </CustomTabPanel>
         <CustomTabPanel value={value} index={1}>
-      <FIRECalculator />
-      </CustomTabPanel>
-      <Community />
+          <FIRECalculator />
+        </CustomTabPanel>
+        <Community />
+      </div>
+      <div className="h-screen sticky top-0">
+        <Aside />
+      </div>
     </div>
   )
 }
 
-export default Dashboard
+export default Dashboard;

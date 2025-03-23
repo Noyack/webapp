@@ -1,4 +1,130 @@
 @import "tailwindcss";
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-Thin.otf') format('opentype');
+  font-weight: 100; /* Thin */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-ThinItalic.otf') format('opentype');
+  font-weight: 100;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-ExtraLight.otf') format('opentype');
+  font-weight: 200; /* Extra Light */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-ExtraLightItalic.otf') format('opentype');
+  font-weight: 200;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-Light.otf') format('opentype');
+  font-weight: 300; /* Light */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-LightItalic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-Regular.otf') format('opentype');
+  font-weight: 400; /* Regular */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-RegularItalic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-Medium.otf') format('opentype');
+  font-weight: 500; /* Medium */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-MediumItalic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-SemiBold.otf') format('opentype');
+  font-weight: 600; /* SemiBold */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-SemiBoldItalic.otf') format('opentype');
+  font-weight: 600;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-Bold.otf') format('opentype');
+  font-weight: 700; /* Bold */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-ExtraBold.otf') format('opentype');
+  font-weight: 800; /* Extra Bold */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-ExtraBoldItalic.otf') format('opentype');
+  font-weight: 800;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-Black.otf') format('opentype');
+  font-weight: 900; /* Black */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Jeko';
+  src: url('/src/assets/fonts/Jeko-BlackItalic.otf') format('opentype');
+  font-weight: 900;
+  font-style: italic;
+}
+
 
 /* 
 :root {
@@ -83,20 +209,83 @@ button:focus-visible {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #bdee6f; /* Green color */
+  background: #2E7D32; /* Green color */
   border-radius: 3px; /* Rounded corners */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #bdee6f; /* Darker green on hover */
+  background: #2E7D32; /* Darker green on hover */
 }
 
 /* For Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #bdee6f #f1f1f1;
+  scrollbar-color: #2E7D32 #f1f1f1;
+  font-family: 'Jeko', sans-serif !important;
 }
 
 a{
   text-decoration: none !important;
+}
+#navigation a{
+  align-items: center;
+}
+
+
+.sign-input{
+  border-radius: 5px;
+  border: 2px solid #bdbdbd;
+  padding: 10px;
+  font-size: 18px ;
+  color: #011E5A;
+  background-color: #fff;
+  width: calc(min(450px, 90%));
+}
+
+.sign-input:focus {
+  outline: 2px solid #011E5A;
+  outline-offset: 2px;
+}
+
+.sign-up-form{
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.sign-up-form button{
+  background-color: #011E5A;
+  color: #fff;
+  width: calc(min(330px, 80%));
+  border-radius: 5px;
+}
+
+.form-aside{
+  background-color: #fff;
+  background-image: url("assets/dotpattern.png");
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-size: 100%;
+  -webkit-transform: scaleX(-1);
+  transform: scaleX(-1);
+}
+
+.aside-img{
+  -webkit-transform: scaleX(-1);
+  transform: scaleX(-1);
+  box-shadow: 0 1px 20px -10px #009DE1;
+  width: 490px;
+  height: 467px;
+}
+.creation-form-aside{
+  background-color: #fff;
+  background-image: url("assets/dotpattern.png");
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-size: 100%;
+}
+.creation-img{
+  box-shadow: 0 1px 20px -10px #009DE1;
+  width: 490px;
+  height: 467px;
 }

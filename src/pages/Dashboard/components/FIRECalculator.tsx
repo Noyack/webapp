@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 import {
   LineChart,
   Line,
@@ -15,57 +15,80 @@ import {
   AccountBalance,
   Payments
 } from "@mui/icons-material";
+import {
+  FireCalculatorState,
+  FireCalculatorProps,
+  AgeNetWorthDataPoint
+} from '../../../types'; // Import types
 
-const FIRECalculator = () => {
-  // ----------------------------
-  // INPUT STATES
-  // ----------------------------
-  const [currentAge, setCurrentAge] = useState(30);
-  const [desiredRetirementAge, setDesiredRetirementAge] = useState(45);
-  const [endAge, setEndAge] = useState(65);
+const FIRECalculator = ({ defaultValues, onCalculate }: FireCalculatorProps = {}) => {
+  // State with proper typing
+  const [state, setState] = useState<FireCalculatorState>({
+    // Age parameters
+    currentAge: defaultValues?.currentAge ?? 30,
+    desiredRetirementAge: defaultValues?.desiredRetirementAge ?? 45,
+    endAge: defaultValues?.endAge ?? 65,
+    
+    // Financial parameters
+    currentNetWorth: defaultValues?.currentNetWorth ?? 100000,
+    preTaxSalary: defaultValues?.preTaxSalary ?? 100000,
+    postTaxSalary: defaultValues?.postTaxSalary ?? 80000,
+    currentAnnualSpending: defaultValues?.currentAnnualSpending ?? 40000,
+    desiredRetirementSpending: defaultValues?.desiredRetirementSpending ?? 40000,
+    
+    // Asset allocation
+    stocksAllocation: defaultValues?.stocksAllocation ?? 90,
+    bondsAllocation: defaultValues?.bondsAllocation ?? 5,
+    cashAllocation: defaultValues?.cashAllocation ?? 1,
+    otherAllocation: defaultValues?.otherAllocation ?? 4,
+    
+    // Expected returns
+    stocksReturn: defaultValues?.stocksReturn ?? 8,
+    bondsReturn: defaultValues?.bondsReturn ?? 5,
+    cashReturn: defaultValues?.cashReturn ?? 0.5,
+    otherReturn: defaultValues?.otherReturn ?? 1.5,
+    
+    // Other assumptions
+    safeWithdrawalRate: defaultValues?.safeWithdrawalRate ?? 4,
+    inflationRate: defaultValues?.inflationRate ?? 3,
+    company401kMatch: defaultValues?.company401kMatch ?? 1,
+    incomeGrowthRate: defaultValues?.incomeGrowthRate ?? 2,
+    socialSecurity: defaultValues?.socialSecurity ?? 0,
+    
+    // Calculation results
+    fireNumber: 0,
+    fireAge: null,
+    yearsUntilFire: null,
+    chartData: []
+  });
 
-  const [currentNetWorth, setCurrentNetWorth] = useState(100000);
-  const [preTaxSalary, setPreTaxSalary] = useState(100000);
-  const [postTaxSalary, setPostTaxSalary] = useState(80000);
+  // Helper function to update state with type safety
+  const updateState = <K extends keyof FireCalculatorState>(
+    key: K, 
+    value: FireCalculatorState[K]
+  ) => {
+    setState(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
 
-  // Distinguish between current spending and desired retirement spending
-  const [currentAnnualSpending, setCurrentAnnualSpending] = useState(40000);
-  const [desiredRetirementSpending, setDesiredRetirementSpending] = useState(40000);
+  // Handle number input changes
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>, fieldName: keyof FireCalculatorState) => {
+    const value = Number(e.target.value);
+    if (!isNaN(value)) {
+      updateState(fieldName, value);
+    }
+  };
 
-  // Asset allocations
-  const [stocksAllocation, setStocksAllocation] = useState(90);  // in %
-  const [bondsAllocation, setBondsAllocation] = useState(5);     // in %
-  const [cashAllocation, setCashAllocation] = useState(1);       // in %
-  const [otherAllocation, setOtherAllocation] = useState(4);     // in %
-
-  // Expected returns for each asset class (nominal)
-  const [stocksReturn, setStocksReturn] = useState(8);   // in %
-  const [bondsReturn, setBondsReturn] = useState(5);     // in %
-  const [cashReturn, setCashReturn] = useState(0.5);     // in %
-  const [otherReturn, setOtherReturn] = useState(1.5);   // in %
-
-  // Other assumptions
-  const [safeWithdrawalRate, setSafeWithdrawalRate] = useState(4);  // e.g., 4%
-  const [inflationRate, setInflationRate] = useState(3);            // e.g., 3%
-  const [company401kMatch, setCompany401kMatch] = useState(1);      // e.g., 1% of salary
-  const [incomeGrowthRate, setIncomeGrowthRate] = useState(2);      // e.g., 2% yearly
-  const [socialSecurity, setSocialSecurity] = useState(0);          // placeholder
-
-  // ----------------------------
-  // RESULT STATES
-  // ----------------------------
-  const [fireNumber, setFireNumber] = useState(0);
-  const [fireAge, setFireAge] = useState<number | null>(null);
-  const [yearsUntilFire, setYearsUntilFire] = useState<number | null>(null);
-
-  const [chartData, setChartData] = useState<Array<{ age: number; netWorth: number }>>([]);
-
-  // ----------------------------
-  // CALCULATION FUNCTION
-  // ----------------------------
+  // Calculate FIRE
   const calculateFIRE = () => {
     // 1) Validate total allocations = 100%
-    const totalAllocation = stocksAllocation + bondsAllocation + cashAllocation + otherAllocation;
+    const totalAllocation = state.stocksAllocation + 
+                           state.bondsAllocation + 
+                           state.cashAllocation + 
+                           state.otherAllocation;
+                           
     if (totalAllocation !== 100) {
       alert("Your asset allocations must sum to 100%.");
       return;
@@ -73,44 +96,43 @@ const FIRECalculator = () => {
 
     // 2) Calculate weighted average return (nominal, before inflation)
     const weightedReturn =
-      (stocksAllocation / 100) * stocksReturn +
-      (bondsAllocation / 100) * bondsReturn +
-      (cashAllocation / 100) * cashReturn +
-      (otherAllocation / 100) * otherReturn;
+      (state.stocksAllocation / 100) * state.stocksReturn +
+      (state.bondsAllocation / 100) * state.bondsReturn +
+      (state.cashAllocation / 100) * state.cashReturn +
+      (state.otherAllocation / 100) * state.otherReturn;
 
     // 3) Convert to real return (subtract inflation)
-    const realReturn = ((1 + weightedReturn / 100) / (1 + inflationRate / 100) - 1) * 100;
+    const realReturn = ((1 + weightedReturn / 100) / (1 + state.inflationRate / 100) - 1) * 100;
 
     // 4) Calculate annual savings while working
-    //    (postTaxSalary - currentAnnualSpending) + 401k match 
-    const annual401kMatch = (company401kMatch / 100) * preTaxSalary;
-    let annualSavings = (postTaxSalary - currentAnnualSpending) + annual401kMatch;
+    const annual401kMatch = (state.company401kMatch / 100) * state.preTaxSalary;
+    let annualSavings = (state.postTaxSalary - state.currentAnnualSpending) + annual401kMatch;
     if (annualSavings < 0) {
       annualSavings = 0; // can't save negative
     }
 
-    // 5) Calculate the FIRE number based on the *desired* retirement spending
-    //    = desiredRetirementSpending / (safeWithdrawalRate / 100)
-    //    e.g., with a 4% SWR => desiredRetirementSpending / 0.04
-    const requiredFireNumber = desiredRetirementSpending / (safeWithdrawalRate / 100);
-    setFireNumber(Math.round(requiredFireNumber));
-
+    // 5) Calculate the FIRE number based on the desired retirement spending
+    const requiredFireNumber = state.desiredRetirementSpending / (state.safeWithdrawalRate / 100);
+    
     // 6) Project net worth growth year by year until endAge or until netWorth >= FIRE number
-    let currentNW = currentNetWorth;
-    let age = currentAge;
-    const projectionData = [{ age, netWorth: currentNW }];
+    let currentNW = state.currentNetWorth;
+    let age = state.currentAge;
+    const projectionData: AgeNetWorthDataPoint[] = [{ age, netWorth: currentNW }];
 
     let foundFire = false;
     let fireAchievedAge = null;
 
-    while (age < endAge) {
+    while (age < state.endAge) {
       age += 1;
       // Increase salary each year by incomeGrowthRate
-      const nextYearSalary = postTaxSalary * Math.pow(1 + incomeGrowthRate / 100, age - currentAge);
-      const nextYear401kMatch = (company401kMatch / 100) * (preTaxSalary * Math.pow(1 + incomeGrowthRate / 100, age - currentAge));
+      const nextYearSalary = state.postTaxSalary * 
+                             Math.pow(1 + state.incomeGrowthRate / 100, age - state.currentAge);
+      const nextYear401kMatch = (state.company401kMatch / 100) * 
+                                (state.preTaxSalary * 
+                                Math.pow(1 + state.incomeGrowthRate / 100, age - state.currentAge));
 
-      // Recalculate annual savings each year (still using currentAnnualSpending until retirement)
-      let nextYearSavings = (nextYearSalary - currentAnnualSpending) + nextYear401kMatch;
+      // Recalculate annual savings each year
+      let nextYearSavings = (nextYearSalary - state.currentAnnualSpending) + nextYear401kMatch;
       if (nextYearSavings < 0) nextYearSavings = 0;
 
       // Grow net worth by real return
@@ -125,18 +147,27 @@ const FIRECalculator = () => {
       }
     }
 
-    setChartData(projectionData);
+    // Update state with results
+    setState(prev => ({
+      ...prev,
+      fireNumber: Math.round(requiredFireNumber),
+      fireAge: fireAchievedAge,
+      yearsUntilFire: fireAchievedAge ? fireAchievedAge - state.currentAge : null,
+      chartData: projectionData
+    }));
 
-    if (foundFire && fireAchievedAge) {
-      setFireAge(fireAchievedAge);
-      setYearsUntilFire(fireAchievedAge - currentAge);
-    } else {
-      // If never found, you won't achieve FIRE by endAge
-      setFireAge(null);
-      setYearsUntilFire(null);
+    // Notify parent component if callback provided
+    if (onCalculate) {
+      onCalculate({
+        fireNumber: Math.round(requiredFireNumber),
+        fireAge: fireAchievedAge,
+        yearsUntilFire: fireAchievedAge ? fireAchievedAge - state.currentAge : null,
+        chartData: projectionData
+      });
     }
   };
 
+  // Render the component (UI remains largely unchanged)
   return (
     <div className="bg-white rounded-xl shadow-sm p-8 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
@@ -155,9 +186,10 @@ const FIRECalculator = () => {
               <label className="block text-sm text-gray-600">Current Age</label>
               <input
                 type="number"
-                value={currentAge}
-                onChange={(e) => setCurrentAge(Number(e.target.value))}
+                value={state.currentAge}
+                onChange={(e) => handleInputChange(e, 'currentAge')}
                 className="w-full p-2 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Current age"
               />
             </div>
           </div>
@@ -169,9 +201,10 @@ const FIRECalculator = () => {
               <label className="block text-sm text-gray-600">Desired Retirement Age</label>
               <input
                 type="number"
-                value={desiredRetirementAge}
-                onChange={(e) => setDesiredRetirementAge(Number(e.target.value))}
+                value={state.desiredRetirementAge}
+                onChange={(e) => handleInputChange(e, 'desiredRetirementAge')}
                 className="w-full p-2 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Desired retirement age"
               />
             </div>
           </div>
@@ -183,9 +216,10 @@ const FIRECalculator = () => {
               <label className="block text-sm text-gray-600">End Age</label>
               <input
                 type="number"
-                value={endAge}
-                onChange={(e) => setEndAge(Number(e.target.value))}
+                value={state.endAge}
+                onChange={(e) => handleInputChange(e, 'endAge')}
                 className="w-full p-2 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="End age for projection"
               />
             </div>
           </div>
@@ -197,9 +231,10 @@ const FIRECalculator = () => {
               <label className="block text-sm text-gray-600">Current Net Worth ($)</label>
               <input
                 type="number"
-                value={currentNetWorth}
-                onChange={(e) => setCurrentNetWorth(Number(e.target.value))}
+                value={state.currentNetWorth}
+                onChange={(e) => handleInputChange(e, 'currentNetWorth')}
                 className="w-full p-2 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Current net worth"
               />
             </div>
           </div>
@@ -211,9 +246,10 @@ const FIRECalculator = () => {
               <label className="block text-sm text-gray-600">Pre-tax Salary ($)</label>
               <input
                 type="number"
-                value={preTaxSalary}
-                onChange={(e) => setPreTaxSalary(Number(e.target.value))}
+                value={state.preTaxSalary}
+                onChange={(e) => handleInputChange(e, 'preTaxSalary')}
                 className="w-full p-2 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Pre-tax salary"
               />
             </div>
           </div>
@@ -225,9 +261,10 @@ const FIRECalculator = () => {
               <label className="block text-sm text-gray-600">Post-tax Salary ($)</label>
               <input
                 type="number"
-                value={postTaxSalary}
-                onChange={(e) => setPostTaxSalary(Number(e.target.value))}
+                value={state.postTaxSalary}
+                onChange={(e) => handleInputChange(e, 'postTaxSalary')}
                 className="w-full p-2 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Post-tax salary"
               />
             </div>
           </div>
@@ -239,9 +276,10 @@ const FIRECalculator = () => {
               <label className="block text-sm text-gray-600">Current Annual Spending ($)</label>
               <input
                 type="number"
-                value={currentAnnualSpending}
-                onChange={(e) => setCurrentAnnualSpending(Number(e.target.value))}
+                value={state.currentAnnualSpending}
+                onChange={(e) => handleInputChange(e, 'currentAnnualSpending')}
                 className="w-full p-2 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Current annual spending"
               />
             </div>
           </div>
@@ -253,9 +291,10 @@ const FIRECalculator = () => {
               <label className="block text-sm text-gray-600">Desired Retirement Spending ($)</label>
               <input
                 type="number"
-                value={desiredRetirementSpending}
-                onChange={(e) => setDesiredRetirementSpending(Number(e.target.value))}
+                value={state.desiredRetirementSpending}
+                onChange={(e) => handleInputChange(e, 'desiredRetirementSpending')}
                 className="w-full p-2 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Desired retirement spending"
               />
             </div>
           </div>
@@ -263,7 +302,6 @@ const FIRECalculator = () => {
 
         {/* RIGHT COLUMN: MORE INPUTS + RESULTS */}
         <div className="space-y-6">
-
           {/* ASSET ALLOCATION */}
           <div className="p-4 bg-gray-50 rounded-lg space-y-3">
             <h3 className="text-md font-semibold mb-2">Asset Allocation</h3>
@@ -272,33 +310,38 @@ const FIRECalculator = () => {
               <label className="text-sm w-24">Stocks (%)</label>
               <input
                 type="number"
-                value={stocksAllocation}
-                onChange={(e) => setStocksAllocation(Number(e.target.value))}
+                value={state.stocksAllocation}
+                onChange={(e) => handleInputChange(e, 'stocksAllocation')}
                 className="flex-1 p-1 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Stocks allocation percentage"
               />
               <label className="text-sm w-20 text-right">Return (%)</label>
               <input
                 type="number"
-                value={stocksReturn}
-                onChange={(e) => setStocksReturn(Number(e.target.value))}
+                value={state.stocksReturn}
+                onChange={(e) => handleInputChange(e, 'stocksReturn')}
                 className="w-16 p-1 border-b-2 border-gray-200 focus:border-green-500 text-right"
+                aria-label="Stocks expected return percentage"
               />
             </div>
 
+            {/* ... Similar inputs for bonds, cash, and other allocations ... */}
             <div className="flex items-center gap-2">
               <label className="text-sm w-24">Bonds (%)</label>
               <input
                 type="number"
-                value={bondsAllocation}
-                onChange={(e) => setBondsAllocation(Number(e.target.value))}
+                value={state.bondsAllocation}
+                onChange={(e) => handleInputChange(e, 'bondsAllocation')}
                 className="flex-1 p-1 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Bonds allocation percentage"
               />
               <label className="text-sm w-20 text-right">Return (%)</label>
               <input
                 type="number"
-                value={bondsReturn}
-                onChange={(e) => setBondsReturn(Number(e.target.value))}
+                value={state.bondsReturn}
+                onChange={(e) => handleInputChange(e, 'bondsReturn')}
                 className="w-16 p-1 border-b-2 border-gray-200 focus:border-green-500 text-right"
+                aria-label="Bonds expected return percentage"
               />
             </div>
 
@@ -306,16 +349,18 @@ const FIRECalculator = () => {
               <label className="text-sm w-24">Cash (%)</label>
               <input
                 type="number"
-                value={cashAllocation}
-                onChange={(e) => setCashAllocation(Number(e.target.value))}
+                value={state.cashAllocation}
+                onChange={(e) => handleInputChange(e, 'cashAllocation')}
                 className="flex-1 p-1 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Cash allocation percentage"
               />
               <label className="text-sm w-20 text-right">Return (%)</label>
               <input
                 type="number"
-                value={cashReturn}
-                onChange={(e) => setCashReturn(Number(e.target.value))}
+                value={state.cashReturn}
+                onChange={(e) => handleInputChange(e, 'cashReturn')}
                 className="w-16 p-1 border-b-2 border-gray-200 focus:border-green-500 text-right"
+                aria-label="Cash expected return percentage"
               />
             </div>
 
@@ -323,16 +368,18 @@ const FIRECalculator = () => {
               <label className="text-sm w-24">Other (%)</label>
               <input
                 type="number"
-                value={otherAllocation}
-                onChange={(e) => setOtherAllocation(Number(e.target.value))}
+                value={state.otherAllocation}
+                onChange={(e) => handleInputChange(e, 'otherAllocation')}
                 className="flex-1 p-1 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Other assets allocation percentage"
               />
               <label className="text-sm w-20 text-right">Return (%)</label>
               <input
                 type="number"
-                value={otherReturn}
-                onChange={(e) => setOtherReturn(Number(e.target.value))}
+                value={state.otherReturn}
+                onChange={(e) => handleInputChange(e, 'otherReturn')}
                 className="w-16 p-1 border-b-2 border-gray-200 focus:border-green-500 text-right"
+                aria-label="Other assets expected return percentage"
               />
             </div>
           </div>
@@ -345,9 +392,10 @@ const FIRECalculator = () => {
               <label className="text-sm w-32">SWR (%)</label>
               <input
                 type="number"
-                value={safeWithdrawalRate}
-                onChange={(e) => setSafeWithdrawalRate(Number(e.target.value))}
+                value={state.safeWithdrawalRate}
+                onChange={(e) => handleInputChange(e, 'safeWithdrawalRate')}
                 className="flex-1 p-1 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Safe withdrawal rate percentage"
               />
             </div>
 
@@ -355,9 +403,10 @@ const FIRECalculator = () => {
               <label className="text-sm w-32">Inflation (%)</label>
               <input
                 type="number"
-                value={inflationRate}
-                onChange={(e) => setInflationRate(Number(e.target.value))}
+                value={state.inflationRate}
+                onChange={(e) => handleInputChange(e, 'inflationRate')}
                 className="flex-1 p-1 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Inflation rate percentage"
               />
             </div>
 
@@ -365,9 +414,10 @@ const FIRECalculator = () => {
               <label className="text-sm w-32">401k Match (%)</label>
               <input
                 type="number"
-                value={company401kMatch}
-                onChange={(e) => setCompany401kMatch(Number(e.target.value))}
+                value={state.company401kMatch}
+                onChange={(e) => handleInputChange(e, 'company401kMatch')}
                 className="flex-1 p-1 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="401k match percentage"
               />
             </div>
 
@@ -375,9 +425,10 @@ const FIRECalculator = () => {
               <label className="text-sm w-32">Income Growth (%)</label>
               <input
                 type="number"
-                value={incomeGrowthRate}
-                onChange={(e) => setIncomeGrowthRate(Number(e.target.value))}
+                value={state.incomeGrowthRate}
+                onChange={(e) => handleInputChange(e, 'incomeGrowthRate')}
                 className="flex-1 p-1 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Income growth rate percentage"
               />
             </div>
 
@@ -385,20 +436,21 @@ const FIRECalculator = () => {
               <label className="text-sm w-32">Social Security ($)</label>
               <input
                 type="number"
-                value={socialSecurity}
-                onChange={(e) => setSocialSecurity(Number(e.target.value))}
+                value={state.socialSecurity}
+                onChange={(e) => handleInputChange(e, 'socialSecurity')}
                 className="flex-1 p-1 border-b-2 border-gray-200 focus:border-green-500"
+                aria-label="Social Security amount"
               />
             </div>
           </div>
-
         </div>
       </div>
 
       {/* CALCULATE BUTTON */}
       <button
         onClick={calculateFIRE}
-        className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 mt-6 flex items-center justify-center"
+        className="w-full bg-[#2E7D32] text-white py-3 rounded-lg hover:bg-green-700 mt-6 flex items-center justify-center"
+        aria-label="Calculate FIRE results"
       >
         <Calculate className="mr-2" />
         Calculate FIRE
@@ -409,28 +461,30 @@ const FIRECalculator = () => {
         <div className="p-4 bg-green-50 rounded-lg text-center">
           <h3 className="text-lg font-semibold">Your FIRE Number</h3>
           <p className="text-2xl mt-2">
-            ${fireNumber.toLocaleString()}
+            ${state.fireNumber.toLocaleString()}
           </p>
         </div>
+        
         <div className="p-4 bg-blue-50 rounded-lg text-center">
           <h3 className="text-lg font-semibold">Your FIRE Age</h3>
           <p className="text-2xl mt-2">
-            {fireAge ?? "N/A"}
+            {state.fireAge ?? "N/A"}
           </p>
         </div>
+        
         <div className="p-4 bg-yellow-50 rounded-lg text-center">
           <h3 className="text-lg font-semibold">Years Until FIRE</h3>
           <p className="text-2xl mt-2">
-            {yearsUntilFire ?? "N/A"}
+            {state.yearsUntilFire ?? "N/A"}
           </p>
         </div>
       </div>
 
       {/* CHART */}
-      {chartData.length > 1 && (
+      {state.chartData.length > 1 && (
         <div className="mt-8 h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
+            <LineChart data={state.chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="age"
@@ -449,7 +503,7 @@ const FIRECalculator = () => {
               <Line
                 type="monotone"
                 dataKey="netWorth"
-                stroke="#16a34a"
+                stroke="#2E7D32"
                 strokeWidth={2}
               />
             </LineChart>

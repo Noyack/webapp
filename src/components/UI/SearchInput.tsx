@@ -21,7 +21,7 @@ export const DashboardSearch = () => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Ask me anything about Financial Wealth"
-          className="w-full pl-10 pr-6 py-4 rounded-full border
+          className="w-full pl-15 pr-6 py-4 rounded-full border
           bg-white shadow-lg
            border-gray-200 focus:border-green-500 focus:ring-1
             focus:ring-green-500 placeholder-gray-400 text-gray-700 transition-all

@@ -1,0 +1,99 @@
+Root Files: 
+.env
+.gitignore
+package-lock.json
+package.json
+README.md
+tailwind.config.js
+tree.txt
+tsconfig.app.json
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+
+SRC Folder:
+Folder PATH listing for volume Hard Drive Disk
+Volume serial number is 34D8-4DA5
+D:\MOHAMED\DESKTOP\NOYACK\FRONTEND\SRC
+|   App.css
+|   App.tsx
+|   index.css
+|   main.tsx
+|   vite-env.d.ts
+|   
++---assets
+|   |   blank.jpg
+|   |   dotpattern.png
+|   |   N-Transparent-Background.png
+|   |   NOYACK Logo transparent background .png
+|   |   Noyack-Email-Signature.png
+|   |   noyackLogo.png
+|   |   react.svg
+|   |   sign-image.jpg
+|   |   
+|   \---fonts
+|           Jeko-Black.otf
+|           Jeko-BlackItalic.otf
+|           Jeko-Bold.otf
+|           Jeko-BoldItalic.otf
+|           Jeko-ExtraBold.otf
+|           Jeko-ExtraBoldItalic.otf
+|           Jeko-ExtraLight.otf
+|           Jeko-ExtraLightItalic.otf
+|           Jeko-Light.otf
+|           Jeko-LightItalic.otf
+|           Jeko-Medium.otf
+|           Jeko-MediumItalic.otf
+|           Jeko-Regular.otf
+|           Jeko-RegularItalic.otf
+|           Jeko-SemiBold.otf
+|           Jeko-SemiBoldItalic.otf
+|           Jeko-Thin.otf
+|           Jeko-ThinItalic.otf
+|           
++---components
+|   +---Layout
+|   |       Aside.tsx
+|   |       DesktopLayout.tsx
+|   |       Navbar.tsx
+|   |       types.ts
+|   |       
+|   \---UI
+|           BoxCard.tsx
+|           SearchInput.tsx
+|           StepperText.tsx
+|           UpcomingEvents.tsx
+|           UserProfileButton.tsx
+|           
++---pages
+|   |   Creation.tsx
+|   |   SignInPage.tsx
+|   |   
+|   +---Dashboard
+|   |   |   Dashboard.tsx
+|   |   |   
+|   |   \---components
+|   |           Community.tsx
+|   |           FIRECalculator.tsx
+|   |           FundSatus.tsx
+|   |           RetiermentCalc.tsx
+|   |           
+|   +---Invest
+|   |       Invest.tsx
+|   |       Overview.tsx
+|   |       
+|   \---Onboarding
+|       |   Onboarding.tsx
+|       |   StepFour.tsx
+|       |   StepOne.tsx
+|       |   StepThree.tsx
+|       |   StepTwo.tsx
+|       |   
+|       \---components
+|               InvestTypeCard.tsx
+|               Steppers.tsx
+|               
+\---routes
+        404.tsx
+        index.tsx
+        

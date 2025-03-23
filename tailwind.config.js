@@ -4,6 +4,9 @@ module.exports = {
         boxShadow: {
           custom: "0 1px 5px #ccc",
         },
+        fontFamily:{
+          jeko: ['Jeko', 'sans-serif']
+        },
       },
     },
   };

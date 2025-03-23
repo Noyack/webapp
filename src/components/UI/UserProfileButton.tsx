@@ -1,17 +1,18 @@
 // components/UI/UserProfileButton.tsx
-import { UserButton } from '@clerk/clerk-react';
+import { UserButton, useUser } from '@clerk/clerk-react';
 
 export default function UserProfileButton() {
 
-
+  const {user} = useUser()
+  
   return (
-    <div className="relative shadow-2xl rounded-l-4xl grow">
+    <div className="relative shadow-2xl rounded-l-4xl grow bg-white">
       <div
         className="flex items-center space-x-3 w-full p-2 rounded-lg"
       >
         <UserButton  />
         <div className="text-left">
-          <p className="font-medium">John Doe</p>
+          <p className="font-medium">{user?.fullName}</p>
           <p className="text-sm text-gray-500">Individual</p>
         </div>
       </div>
