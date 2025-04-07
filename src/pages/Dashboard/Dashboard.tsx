@@ -1,4 +1,4 @@
-import { AccountBalance, AttachMoney, LocalAtmOutlined } from "@mui/icons-material"
+import { AccountBalance, AttachMoney, KeyboardArrowRightOutlined, LocalAtmOutlined } from "@mui/icons-material"
 import { ReactNode, useState } from "react";
 import FundStatus from "./components/FundSatus";
 import RetirementCalc from "./components/RetiermentCalc";
@@ -7,6 +7,7 @@ import FIRECalculator from "./components/FIRECalculator";
 import { Box, Tab, Tabs } from "@mui/material";
 import Aside from "../../components/Layout/Aside";
 import { FundStatusElement } from "../../types";
+import { Link } from "react-router";
 
 
 // Define type for tab panel props
@@ -72,16 +73,25 @@ const Dashboard = () => {
     <div className="flex">
       <div className="flex flex-col gap-10 px-2">
         <FundStatus statusElements={statusElements} />
-        <Tabs value={value} onChange={handleChange} aria-label="financial calculators tabs">
-          <Tab label="Retirement Projection" {...a11yProps(0)} />
-          <Tab label="FIRE Calculator" {...a11yProps(1)} />
-        </Tabs>
+        <div>
+
+        <div className="flex justify-between items-center">
+          <Tabs value={value} onChange={handleChange} aria-label="financial calculators tabs">
+            <Tab label="Retirement Projection" {...a11yProps(0)} />
+            <Tab label="FIRE Calculator" {...a11yProps(1)} />
+          </Tabs>
+          <Link to={"/planning"}>
+            See More
+            <KeyboardArrowRightOutlined />
+          </Link>
+        </div>
         <CustomTabPanel value={value} index={0}>
           <RetirementCalc />
         </CustomTabPanel>
         <CustomTabPanel value={value} index={1}>
           <FIRECalculator />
         </CustomTabPanel>
+        </div>
         <Community />
       </div>
       <div className="h-screen sticky top-0">

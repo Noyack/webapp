@@ -3,7 +3,6 @@ import { Typography, Button, Divider } from '@mui/material'
 import Logo from '../../assets/noyackLogo.png'
 import AsideImage from '../../assets/sign-image.jpg'
 import { useSignIn } from '@clerk/clerk-react'
-import { useNavigate } from 'react-router-dom'
 import { Google, Facebook } from '@mui/icons-material'
 import { ClerkError } from '../../types'
 
@@ -26,8 +25,6 @@ const MicrosoftIcon = () => (
 
 function SignInComponent({ onSwitchToSignUp }: SignInComponentProps) {
   const { isLoaded, signIn, setActive } = useSignIn();
-  const navigate = useNavigate();
-  
   // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,7 +54,7 @@ function SignInComponent({ onSwitchToSignUp }: SignInComponentProps) {
       if (result.status === 'complete') {
         // Sign in was successful
         await setActive({ session: result.createdSessionId });
-        navigate('/'); // Navigate to the dashboard or home page
+        window.location.replace('/'); // Navigate to the dashboard or home page
       } else {
         // Sign in requires additional steps, such as 2FA
         // For now, just show an error, but you could handle this more gracefully

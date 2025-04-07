@@ -6,11 +6,12 @@ import {
   BalanceType, 
   OverviewState,
   AccountBalance,
-  ReferralInfo,
+  // ReferralInfo,
   InvestmentTransaction,
-  RecurringInvestment
+  // RecurringInvestment
 } from '../../types'
 import { investmentService } from '../../services'
+import { Link } from 'react-router'
 
 function Overview() {
     const { user } = useUser();
@@ -19,18 +20,18 @@ function Overview() {
     const [state, setState] = useState<OverviewState>({
       balanceType: 'wallet',
       reinvestEnabled: true,
-      referralCode: "",
+      referralCode: "https://exemple.com/fenwif23e1edw",
       referralCopied: false,
       isLoading: {
-        balance: true,
-        referral: true,
-        transactions: true,
+        balance: false,
+        referral: false,
+        transactions: false,
       },
       error: null
     });
     
     // State for data from API
-    const [accountBalance, setAccountBalance] = useState<AccountBalance>({
+    const [accountBalance,] = useState<AccountBalance>({
       walletBalance: 0,
       totalInvestments: 0,
       totalEarnings: 0,
@@ -38,82 +39,81 @@ function Overview() {
     });
     
     // Using correct type for referralInfo state
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [referralInfo, setReferralInfo] = useState<ReferralInfo>({
-      code: "",
-      url: "",
-      referralCount: 0,
-      rewardsEarned: 0,
-      pendingRewards: 0
-    });
+    // const [referralInfo, setReferralInfo] = useState<ReferralInfo>({
+    //   code: "https://exemple.com/fenwif23e1edw",
+    //   url: "https://exemple.com/fenwif23e1edw",
+    //   referralCount: 0,
+    //   rewardsEarned: 0,
+    //   pendingRewards: 0
+    // });
     
-    const [transactions, setTransactions] = useState<InvestmentTransaction[]>([]);
+    const [transactions] = useState<InvestmentTransaction[]>([]);
     
     // Fix the type error by explicitly defining the type
-    const [recurringInvestments, setRecurringInvestments] = useState<RecurringInvestment[]>([]);
+    // const [recurringInvestments] = useState<RecurringInvestment[]>([]);
     
     // Fetch data on component mount
     useEffect(() => {
-      const fetchData = async () => {
-        try {
-          // Fetch account balance
-          setState(prev => ({
-            ...prev, 
-            isLoading: {...prev.isLoading, balance: true}
-          }));
+      // const fetchData = async () => {
+      //   try {
+      //     // Fetch account balance
+      //     setState(prev => ({
+      //       ...prev, 
+      //       isLoading: {...prev.isLoading, balance: true}
+      //     }));
           
-          const balance = await investmentService.getAccountBalance();
-          setAccountBalance(balance);
+      //     const balance = await investmentService.getAccountBalance();
+      //     setAccountBalance(balance);
           
-          setState(prev => ({
-            ...prev, 
-            isLoading: {...prev.isLoading, balance: false}
-          }));
+      //     setState(prev => ({
+      //       ...prev, 
+      //       isLoading: {...prev.isLoading, balance: false}
+      //     }));
           
-          // Fetch referral info
-          setState(prev => ({
-            ...prev, 
-            isLoading: {...prev.isLoading, referral: true}
-          }));
+      //     // Fetch referral info
+      //     setState(prev => ({
+      //       ...prev, 
+      //       isLoading: {...prev.isLoading, referral: true}
+      //     }));
           
-          const referralData = await investmentService.getReferralInfo();
-          setReferralInfo(referralData);
-          setState(prev => ({
-            ...prev, 
-            referralCode: referralData.url,
-            isLoading: {...prev.isLoading, referral: false}
-          }));
+      //     const referralData = await investmentService.getReferralInfo();
+      //     setReferralInfo(referralData);
+      //     setState(prev => ({
+      //       ...prev, 
+      //       referralCode: referralData.url,
+      //       isLoading: {...prev.isLoading, referral: false}
+      //     }));
           
-          // Fetch transaction history
-          setState(prev => ({
-            ...prev, 
-            isLoading: {...prev.isLoading, transactions: true}
-          }));
+      //     // Fetch transaction history
+      //     setState(prev => ({
+      //       ...prev, 
+      //       isLoading: {...prev.isLoading, transactions: true}
+      //     }));
           
-          const txns = await investmentService.getTransactionHistory({
-            limit: 5 // Just get the most recent 5
-          });
-          setTransactions(txns);
+      //     const txns = await investmentService.getTransactionHistory({
+      //       limit: 5 // Just get the most recent 5
+      //     });
+      //     setTransactions(txns);
           
-          // Fetch recurring investments
-          const recurrings = await investmentService.getRecurringInvestments();
-          setRecurringInvestments(recurrings);
+      //     // Fetch recurring investments
+      //     const recurrings = await investmentService.getRecurringInvestments();
+      //     setRecurringInvestments(recurrings);
           
-          setState(prev => ({
-            ...prev, 
-            isLoading: {...prev.isLoading, transactions: false}
-          }));
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-          setState(prev => ({
-            ...prev,
-            error: error instanceof Error ? error.message : 'An unknown error occurred',
-            isLoading: {balance: false, referral: false, transactions: false}
-          }));
-        }
-      };
+      //     setState(prev => ({
+      //       ...prev, 
+      //       isLoading: {...prev.isLoading, transactions: false}
+      //     }));
+      //   } catch (error) {
+      //     console.error('Error fetching user data:', error);
+      //     setState(prev => ({
+      //       ...prev,
+      //       error: error instanceof Error ? error.message : 'An unknown error occurred',
+      //       isLoading: {balance: false, referral: false, transactions: false}
+      //     }));
+      //   }
+      // };
       
-      fetchData();
+      // fetchData();
     }, []);
     
     const tooltipText = `The Fund has adopted an "opt out"
@@ -220,20 +220,20 @@ function Overview() {
     return (
       <div className='flex flex-col gap-10'>
         <div className='flex flex-col gap-2'>
-          <Typography fontSize={"25px"} fontWeight={"bold"}>Investment Overview</Typography>
+          <Typography fontSize={"22px"} fontWeight={"bold"}>Investment Overview</Typography>
           <div className='flex flex-wrap shadow-xl w-full min-h-20 bg-white rounded-4xl gap-8 p-8'>
             <img 
-              width={"80px"} 
-              height={"80px"} 
+              width={"60px"} 
+              height={"60px"} 
               src={user?.imageUrl} 
               alt="User profile"
               className='rounded-full' 
             />
             <div className='flex flex-col'>
-              <Typography fontWeight={"bold"} fontSize={"24px"}>
+              <Typography fontWeight={"bold"} fontSize={"20px"}>
                 {user?.fullName}
               </Typography>
-              <Typography className='text-gray-500'>Account Holder</Typography>
+              <Typography className='text-gray-500' fontSize={"15px"}>Account Holder</Typography>
             </div>
             <div className='text-gray-500'>
               <Typography fontWeight={'bold'}>Referral Code</Typography>
@@ -267,9 +267,9 @@ function Overview() {
         </div>
         
         <div className='flex flex-col gap-2'>
-          <Typography fontSize={"25px"} fontWeight={"bold"}>Recurring Investment</Typography>
+          <Typography fontSize={"22px"} fontWeight={"bold"}>Recurring Investment</Typography>
           <div className='flex flex-col shadow-xl w-full min-h-20 bg-white rounded-4xl gap-8 p-8'>
-            {recurringInvestments.length > 0 ? (
+            {/* {recurringInvestments.length > 0 ? (
               <div className="flex flex-col gap-4">
                 {recurringInvestments.map((recurring) => (
                   <div key={recurring.id} className="flex justify-between items-center border-b pb-4">
@@ -292,12 +292,15 @@ function Overview() {
               <Typography>
                 You have no recurring investments.
               </Typography>
-            )}
+            )} */}
+            <div className='flex justify-around'>
+              <Link to={""} className='text-[#2E7D32] font-bold underline'>Invest in Alternative Investments</Link>
+            </div>
           </div>
         </div>
         
         <div className='flex flex-col gap-2'>
-          <Typography fontSize={"25px"} fontWeight={"bold"}>My Wallet</Typography>
+          <Typography fontSize={"22px"} fontWeight={"bold"}>My Wallet</Typography>
           <div className='flex flex-col shadow-xl w-full min-h-20 bg-white rounded-4xl gap-8 p-8'>
             <div className='flex justify-between'>
               <div>
@@ -379,7 +382,7 @@ function Overview() {
         </div>
         
         <div className='flex flex-col gap-2'>
-          <Typography fontSize={"25px"} fontWeight={"bold"}>Investment History</Typography>
+          <Typography fontSize={"22px"} fontWeight={"bold"}>Investment History</Typography>
           <div className='flex flex-col shadow-xl w-full min-h-20 bg-white rounded-4xl gap-8 p-8'>
             {transactions.length > 0 ? (
               <div className="w-full">

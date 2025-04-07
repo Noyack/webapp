@@ -12,21 +12,21 @@ function StepperText({step, currentStep}:Props) {
     <>
     {
       currentStep < step &&
-      <div className='w-[60px] h-[60px] rounded-full border-1
+      <div className='w-[40px] h-[40px] rounded-full border-1
         flex justify-center items-center bg-white'>
-          <Typography fontSize={"22px"}>{step}</Typography>
+          <Typography fontSize={"18px"}>{step}</Typography>
       </div>
     }
     {
       currentStep === step &&
-      <div className='w-[60px] h-[60px] rounded-full 
+      <div className='w-[40px] h-[40px] rounded-full 
         flex justify-center items-center bg-[#2E7D32] text-white'>
-          <Typography fontSize={"22px"}>{step}</Typography>
+          <Typography fontSize={"18px"}>{step}</Typography>
       </div>
     }
     {
       currentStep > step &&
-      <div className='w-[60px] h-[60px] rounded-full 
+      <div className='w-[40px] h-[40px] rounded-full 
         flex justify-center items-center text-blue-600 '>
           <CheckRounded sx={{color:"#009FE3"}}/>
       </div>

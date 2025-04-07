@@ -231,6 +231,10 @@ a{
   align-items: center;
 }
 
+.noyack-green{
+  color: #2E7D32;
+}
+
 
 .sign-input{
   border-radius: 5px;
@@ -294,4 +298,7 @@ a{
   box-shadow: 0 1px 20px -10px #009DE1;
   width: 490px;
   height: 467px;
+}
+.underline{
+  text-decoration: underline !important;
 }

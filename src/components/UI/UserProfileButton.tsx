@@ -8,7 +8,7 @@ export default function UserProfileButton() {
   return (
     <div className="relative shadow-2xl rounded-l-4xl grow bg-white">
       <div
-        className="flex items-center space-x-3 w-full p-2 rounded-lg"
+        className="flex items-center space-x-3 w-[200px] p-2 rounded-lg"
       >
         <UserButton  />
         <div className="text-left">

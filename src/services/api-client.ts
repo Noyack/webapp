@@ -3,7 +3,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ApiResponse, ErrorResponse } from '../types';
 
 // Base API URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 /**
  * Creates and configures an Axios instance for API calls
@@ -49,7 +49,7 @@ export class ApiClient {
    * Set the authentication token for all subsequent requests
    */
   setAuthToken(token: string): void {
-    this.api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    this.api.defaults.headers.common['authorization'] = `Bearer ${token}`;
   }
 
   /**

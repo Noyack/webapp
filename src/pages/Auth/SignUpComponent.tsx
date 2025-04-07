@@ -1,19 +1,30 @@
-import { Typography } from '@mui/material'
+import { Typography, Button, Divider } from '@mui/material'
 import { useState } from 'react'
 import Logo from '../../assets/noyackLogo.png'
 import AsideImage from '../../assets/sign-image.jpg'
 import { useSignUp } from '@clerk/clerk-react'
-import { useNavigate } from 'react-router-dom'
 import { ClerkError } from '../../types'
+import { Google, Facebook } from '@mui/icons-material'
+
+// Define the OAuth strategies as string literals to match Clerk's expected values
+type OAuthStrategy = 'oauth_google' | 'oauth_facebook' | 'oauth_microsoft';
 
 interface SignUpComponentProps {
   onSwitchToSignIn?: () => void;
 }
 
+// Microsoft icon component
+const MicrosoftIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+    <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+    <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+    <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+  </svg>
+)
 
 function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps) {
   const { isLoaded, signUp, setActive } = useSignUp();
-  const navigate = useNavigate();
   
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -87,12 +98,40 @@ function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps) {
       await setActive({ session: completeSignUp.createdSessionId });
       
       // Redirect to home page or dashboard
-      navigate('/');
+      window.location.replace('/');
     } catch (err) {
         const clerkError = err as ClerkError
         console.error('Error during verification:', err);
         setError(clerkError.errors?.[0]?.message || 'Verification failed. Please try again.');
         setLoading(false);
+    }
+  };
+
+  // Handle SSO sign-up with providers
+  const handleSSOSignUp = async (strategy: OAuthStrategy) => {
+    if (!isLoaded) return;
+
+    try {
+      setLoading(true);
+      
+      await signUp.authenticateWithRedirect({
+        strategy,
+        redirectUrl: '/sso-callback',
+        redirectUrlComplete: '/'
+      });
+      
+      // Note: The redirect will happen automatically, so we don't need to set loading to false
+    } catch (err) {
+      console.error(`Error signing up with ${strategy}:`, err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (typeof err === 'object' && err !== null && 'errors' in err) {
+        const clerkError = err as ClerkError;
+        setError(clerkError.errors?.[0]?.message || `Failed to sign up with ${strategy}. Please try again.`);
+      } else {
+        setError(`Failed to sign up with ${strategy}. Please try again.`);
+      }
+      setLoading(false);
     }
   };
 
@@ -126,63 +165,105 @@ function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps) {
 
           {!pendingVerification ? (
             // Sign up form
-            <form onSubmit={handleSubmit} className='sign-up-form'>
-              <div className='flex flex-col gap-[13px]'>
-                <div className='flex gap-[8px]'>
+            <div className="sign-up-container">
+              <form onSubmit={handleSubmit} className='sign-up-form'>
+                <div className='flex flex-col gap-[13px]'>
+                  <div className='flex gap-[8px]'>
+                    <input 
+                      className='sign-input max-w-[220px]' 
+                      type="text" 
+                      placeholder='First Name'
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                    />
+                    <input 
+                      className='sign-input max-w-[220px]' 
+                      type="text" 
+                      placeholder='Last Name'
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                    />
+                  </div>
                   <input 
-                    className='sign-input max-w-[220px]' 
-                    type="text" 
-                    placeholder='First Name'
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    className='sign-input' 
+                    type="email" 
+                    placeholder='youremail@example.com'
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                   <input 
-                    className='sign-input max-w-[220px]' 
-                    type="text" 
-                    placeholder='Last Name'
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    className='sign-input' 
+                    type="password" 
+                    placeholder='Create a password'
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
+                    minLength={8}
                   />
                 </div>
-                <input 
-                  className='sign-input' 
-                  type="email" 
-                  placeholder='youremail@example.com'
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <input 
-                  className='sign-input' 
-                  type="password" 
-                  placeholder='Create a password'
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                />
+                
+                {error && (
+                  <div className='text-red-500 mt-2 text-center'>
+                    {error}
+                  </div>
+                )}
+                
+                <div className="text-center mt-3">
+                  <button 
+                    type="submit" 
+                    className='text-lg py-2 w-full' 
+                    disabled={loading}
+                  >
+                    {loading ? 'Creating Account...' : 'Create An Account'}
+                  </button>
+                </div>
+              </form>
+
+              <div className="my-4 flex items-center">
+                <Divider className="flex-grow" />
+                <Typography className="px-3 text-gray-500">or</Typography>
+                <Divider className="flex-grow" />
               </div>
               
-              {error && (
-                <div className='text-red-500 mt-2 text-center'>
-                  {error}
-                </div>
-              )}
+              <div className="flex flex-col gap-3">
+                <Button 
+                  variant="outlined"
+                  startIcon={<Google />}
+                  onClick={() => handleSSOSignUp("oauth_google")}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                  fullWidth
+                >
+                  Sign up with Google
+                </Button>
+                
+                <Button 
+                  variant="outlined"
+                  startIcon={<MicrosoftIcon />}
+                  onClick={() => handleSSOSignUp("oauth_microsoft")}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                  fullWidth
+                >
+                  Sign up with Microsoft
+                </Button>
+                
+                <Button 
+                  variant="outlined"
+                  startIcon={<Facebook />}
+                  onClick={() => handleSSOSignUp("oauth_facebook")}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                  fullWidth
+                >
+                  Sign up with Facebook
+                </Button>
+              </div>
               
-              <button 
-                type="submit" 
-                className='text-lg py-2' 
-                disabled={loading}
-              >
-                {loading ? 'Creating Account...' : 'Create An Account'}
-              </button>
-              
-              <Typography variant='caption' className='text-center text-gray-500'>
+              <Typography variant='caption' className='mt-4 text-center text-gray-500 block'>
                 By signing up, you agree to our Terms of Service and Privacy Policy.
               </Typography>
-            </form>
+            </div>
           ) : (
             // Verification form
             <form onSubmit={handleVerifyCode} className='sign-up-form'>
