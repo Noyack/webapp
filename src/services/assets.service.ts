@@ -222,23 +222,6 @@ export const assetsService = {
   // Get all assets for a user
   async getUserAssets(userId: string): Promise<AssetsFormData> {
     try {
-      // Get assets
-      const assetsResponse = await apiClient.get(`/v1/users/${userId}/assets`);
-      const assets = assetsResponse.data as AssetDB[];
-
-      // Get asset details
-      const detailsResponse = await apiClient.get(`/v1/users/${userId}/asset-details`);
-      const details = detailsResponse.data as AssetDetailDB[];
-
-      // Group details by asset id
-      const detailsByAssetId = new Map<string, AssetDetailDB[]>();
-      details.forEach(detail => {
-        if (!detailsByAssetId.has(detail.assetId)) {
-          detailsByAssetId.set(detail.assetId, []);
-        }
-        detailsByAssetId.get(detail.assetId)?.push(detail);
-      });
-
       // Initialize result with empty arrays
       const result: AssetsFormData = {
         liquidAssets: [],
@@ -265,6 +248,27 @@ export const assetsService = {
         },
         liquidityNeeds: 10
       };
+
+      // Get assets
+      const assetsResponse = await apiClient.get(`/v1/users/${userId}/assets`);
+      const assets = assetsResponse.data as AssetDB[];
+
+      if (!assets || assets.length === 0) {
+        return result; // Return empty result if no assets
+      }
+
+      // Get asset details
+      const detailsResponse = await apiClient.get(`/v1/users/${userId}/assets`);
+      const details = detailsResponse.data as AssetDetailDB[];
+
+      // Group details by asset id
+      const detailsByAssetId = new Map<string, AssetDetailDB[]>();
+      details.forEach(detail => {
+        if (!detailsByAssetId.has(detail.assetId)) {
+          detailsByAssetId.set(detail.assetId, []);
+        }
+        detailsByAssetId.get(detail.assetId)?.push(detail);
+      });
 
       // Map assets to their respective arrays
       assets.forEach(asset => {
@@ -294,27 +298,32 @@ export const assetsService = {
       });
 
       // Get allocations
-      const allocationsResponse = await apiClient.get(`/v1/users/${userId}/asset-allocations`);
-      const allocations = allocationsResponse.data as AssetAllocationDB[];
+      try {
+        const allocationsResponse = await apiClient.get(`/v1/users/${userId}/asset-allocations`);
+        const allocations = allocationsResponse.data as AssetAllocationDB[];
 
-      // Map allocations
-      allocations.forEach(allocation => {
-        if (allocation.allocationType === 'current') {
-          result.currentAllocation = mapAllocationToFrontendModel(allocation);
-        } else if (allocation.allocationType === 'target') {
-          result.targetAllocation = mapAllocationToFrontendModel(allocation);
-        }
+        // Map allocations
+        allocations.forEach(allocation => {
+          if (allocation.allocationType === 'current') {
+            result.currentAllocation = mapAllocationToFrontendModel(allocation);
+          } else if (allocation.allocationType === 'target') {
+            result.targetAllocation = mapAllocationToFrontendModel(allocation);
+          }
 
-        // Set liquidity needs if available
-        if (allocation.liquidityNeeds !== undefined && allocation.allocationType === 'current') {
-          result.liquidityNeeds = Number(allocation.liquidityNeeds);
-        }
-      });
+          // Set liquidity needs if available
+          if (allocation.liquidityNeeds !== undefined && allocation.allocationType === 'current') {
+            result.liquidityNeeds = Number(allocation.liquidityNeeds);
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching allocations, using defaults:', error);
+        // We'll just use the default allocations if there was an error
+      }
 
       return result;
     } catch (error) {
       console.error('Error fetching assets:', error);
-      throw error;
+      throw new Error('Failed to load assets data. Please try again later.');
     }
   },
 
@@ -325,21 +334,27 @@ export const assetsService = {
       
       // Create asset
       const response = await apiClient.post(`/v1/users/${userId}/assets`, assetDB);
-      const createdAsset = response.data as AssetDB;
+      const createdAsset = response.data;
+      
+      if (!createdAsset || !createdAsset.id) {
+        throw new Error('Failed to create asset');
+      }
       
       // Create details if any
       if (details.length > 0) {
-        const detailsWithAssetId = details.map(detail => ({
-          ...detail,
-          assetId: createdAsset.id || ''
-        }));
-        await apiClient.post(`/v1/users/${userId}/asset-details/batch`, detailsWithAssetId);
+        // Update all details with the new asset ID
+        details.forEach(detail => {
+          detail.assetId = createdAsset.id;
+        });
+        
+        // Send all details at once
+        await apiClient.post(`/v1/assets/${createdAsset.id}/details/bulk`, details);
       }
       
-      return createdAsset.id || '';
+      return createdAsset.id;
     } catch (error) {
       console.error('Error creating asset:', error);
-      throw error;
+      throw new Error('Failed to create asset. Please try again later.');
     }
   },
 
@@ -353,27 +368,26 @@ export const assetsService = {
       const userId = ''; // We don't need userId for updates
       const { asset: assetDB, details } = mapAssetToBackendModel(asset, assetType, userId);
       
-      // Remove id from update data
+      // Remove id and userId from update data
       delete assetDB.id;
       delete assetDB.userId;
       
       // Update asset
       await apiClient.patch(`/v1/assets/${assetId}`, assetDB);
       
-      // Delete existing details
-      await apiClient.delete(`/v1/assets/${assetId}/details`);
-      
-      // Create new details if any
+      // Only update details if there are any
       if (details.length > 0) {
-        const detailsWithAssetId = details.map(detail => ({
-          ...detail,
-          assetId
-        }));
-        await apiClient.post(`/v1/assets/${assetId}/details/batch`, detailsWithAssetId);
+        // Update all details with the asset ID
+        details.forEach(detail => {
+          detail.assetId = assetId;
+        });
+        
+        // Bulk update all details
+        await apiClient.post(`/v1/assets/${assetId}/details/bulk`, details);
       }
     } catch (error) {
       console.error('Error updating asset:', error);
-      throw error;
+      throw new Error('Failed to update asset. Please try again later.');
     }
   },
 
@@ -383,7 +397,7 @@ export const assetsService = {
       await apiClient.delete(`/v1/assets/${assetId}`);
     } catch (error) {
       console.error('Error deleting asset:', error);
-      throw error;
+      throw new Error('Failed to delete asset. Please try again later.');
     }
   },
 
@@ -406,150 +420,59 @@ export const assetsService = {
       const allocationsResponse = await apiClient.get(`/v1/users/${userId}/asset-allocations`);
       const existingAllocations = allocationsResponse.data as AssetAllocationDB[];
       
-      const currentExists = existingAllocations.some(a => a.allocationType === 'current');
-      const targetExists = existingAllocations.some(a => a.allocationType === 'target');
+      const currentAllocationObj = existingAllocations.find(a => a.allocationType === 'current');
+      const targetAllocationObj = existingAllocations.find(a => a.allocationType === 'target');
       
-      // Save or update current allocation
-      if (currentExists) {
-        const currentId = existingAllocations.find(a => a.allocationType === 'current')?.id;
-        if (currentId) {
-          await apiClient.patch(`/v1/asset-allocations/${currentId}`, current);
-        }
+      // Create or update current allocation
+      if (currentAllocationObj) {
+        await apiClient.patch(`/v1/asset-allocations/${currentAllocationObj.id}`, current);
       } else {
         await apiClient.post(`/v1/users/${userId}/asset-allocations`, current);
       }
       
-      // Save or update target allocation
-      if (targetExists) {
-        const targetId = existingAllocations.find(a => a.allocationType === 'target')?.id;
-        if (targetId) {
-          await apiClient.patch(`/v1/asset-allocations/${targetId}`, target);
-        }
+      // Create or update target allocation
+      if (targetAllocationObj) {
+        await apiClient.patch(`/v1/asset-allocations/${targetAllocationObj.id}`, target);
       } else {
         await apiClient.post(`/v1/users/${userId}/asset-allocations`, target);
       }
     } catch (error) {
       console.error('Error saving allocations:', error);
-      throw error;
+      throw new Error('Failed to save allocations. Please try again later.');
     }
   },
 
   // Save complete assets and allocations data
   async saveAssetsAndAllocations(userId: string, data: AssetsFormData): Promise<void> {
     try {
-      // First, save all assets
-      
-      // 1. Get existing assets to know what to update/delete
+      // First, get existing assets to know what to update/delete
       const existingAssetsResponse = await apiClient.get(`/v1/users/${userId}/assets`);
       const existingAssets = existingAssetsResponse.data as AssetDB[];
       
-      // Create sets of existing asset IDs by type
-      const existingIds = {
-        liquid: new Set(existingAssets.filter(a => a.assetType === 'liquid').map(a => a.id)),
-        investment: new Set(existingAssets.filter(a => a.assetType === 'investment').map(a => a.id)),
-        retirement: new Set(existingAssets.filter(a => a.assetType === 'retirement').map(a => a.id)),
-        real_estate: new Set(existingAssets.filter(a => a.assetType === 'real_estate').map(a => a.id)),
-        business: new Set(existingAssets.filter(a => a.assetType === 'business').map(a => a.id)),
-        personal_property: new Set(existingAssets.filter(a => a.assetType === 'personal_property').map(a => a.id))
+      // Group existing assets by type
+      const existingByType = {
+        liquid: existingAssets.filter(a => a.assetType === 'liquid'),
+        investment: existingAssets.filter(a => a.assetType === 'investment'),
+        retirement: existingAssets.filter(a => a.assetType === 'retirement'),
+        real_estate: existingAssets.filter(a => a.assetType === 'real_estate'),
+        business: existingAssets.filter(a => a.assetType === 'business'),
+        personal_property: existingAssets.filter(a => a.assetType === 'personal_property')
       };
       
-      // 2. Process each asset type
+      // Process each asset type in parallel
+      const assetPromises = [
+        this.processAssetType(userId, 'liquid', data.liquidAssets, existingByType.liquid),
+        this.processAssetType(userId, 'investment', data.investmentAssets, existingByType.investment),
+        this.processAssetType(userId, 'retirement', data.retirementAssets, existingByType.retirement),
+        this.processAssetType(userId, 'real_estate', data.realEstateAssets, existingByType.real_estate),
+        this.processAssetType(userId, 'business', data.businessAssets, existingByType.business),
+        this.processAssetType(userId, 'personal_property', data.personalPropertyAssets, existingByType.personal_property)
+      ];
       
-      // Liquid assets
-      const liquidPromises = data.liquidAssets.map(async (asset) => {
-        if (asset.id && existingIds.liquid.has(asset.id)) {
-          // Update
-          existingIds.liquid.delete(asset.id);
-          return this.updateAsset(asset.id, asset, 'liquid');
-        } else {
-          // Create
-          return this.createAsset(userId, asset, 'liquid');
-        }
-      });
+      // Wait for all asset operations to complete
+      await Promise.all(assetPromises);
       
-      // Investment assets
-      const investmentPromises = data.investmentAssets.map(async (asset) => {
-        if (asset.id && existingIds.investment.has(asset.id)) {
-          // Update
-          existingIds.investment.delete(asset.id);
-          return this.updateAsset(asset.id, asset, 'investment');
-        } else {
-          // Create
-          return this.createAsset(userId, asset, 'investment');
-        }
-      });
-      
-      // Retirement assets
-      const retirementPromises = data.retirementAssets.map(async (asset) => {
-        if (asset.id && existingIds.retirement.has(asset.id)) {
-          // Update
-          existingIds.retirement.delete(asset.id);
-          return this.updateAsset(asset.id, asset, 'retirement');
-        } else {
-          // Create
-          return this.createAsset(userId, asset, 'retirement');
-        }
-      });
-      
-      // Real estate assets
-      const realEstatePromises = data.realEstateAssets.map(async (asset) => {
-        if (asset.id && existingIds.real_estate.has(asset.id)) {
-          // Update
-          existingIds.real_estate.delete(asset.id);
-          return this.updateAsset(asset.id, asset, 'real_estate');
-        } else {
-          // Create
-          return this.createAsset(userId, asset, 'real_estate');
-        }
-      });
-      
-      // Business assets
-      const businessPromises = data.businessAssets.map(async (asset) => {
-        if (asset.id && existingIds.business.has(asset.id)) {
-          // Update
-          existingIds.business.delete(asset.id);
-          return this.updateAsset(asset.id, asset, 'business');
-        } else {
-          // Create
-          return this.createAsset(userId, asset, 'business');
-        }
-      });
-      
-      // Personal property assets
-      const personalPropertyPromises = data.personalPropertyAssets.map(async (asset) => {
-        if (asset.id && existingIds.personal_property.has(asset.id)) {
-          // Update
-          existingIds.personal_property.delete(asset.id);
-          return this.updateAsset(asset.id, asset, 'personal_property');
-        } else {
-          // Create
-          return this.createAsset(userId, asset, 'personal_property');
-        }
-      });
-      
-      // 3. Wait for all assets to be created/updated
-      await Promise.all([
-        ...liquidPromises,
-        ...investmentPromises,
-        ...retirementPromises,
-        ...realEstatePromises,
-        ...businessPromises,
-        ...personalPropertyPromises
-      ]);
-      
-      // 4. Delete assets that were not included
-      const deletePromises = [
-        ...Array.from(existingIds.liquid),
-        ...Array.from(existingIds.investment),
-        ...Array.from(existingIds.retirement),
-        ...Array.from(existingIds.real_estate),
-        ...Array.from(existingIds.business),
-        ...Array.from(existingIds.personal_property)
-      ].map(id => this.deleteAsset(id));
-      
-      await Promise.all(deletePromises);
-      
-      // 5. Save allocations
+      // Save allocations
       await this.saveAllocations(
         userId, 
         data.currentAllocation, 
@@ -559,8 +482,47 @@ export const assetsService = {
       
     } catch (error) {
       console.error('Error saving assets and allocations:', error);
-      throw error;
+      throw new Error('Failed to save your data. Please try again later.');
     }
+  },
+  
+  // Helper method to process a single asset type (create, update, delete)
+  async processAssetType(
+    userId: string,
+    assetType: AssetDB['assetType'],
+    newAssets: unknown[],
+    existingAssets: AssetDB[]
+  ): Promise<void> {
+    // Create sets of existing asset IDs
+    const existingIds = new Set(existingAssets.map(a => a.id));
+    const newIds = new Set(newAssets.filter(a => a.id).map(a => a.id));
+    
+    // Identify assets to create, update, and delete
+    const toCreate = newAssets.filter(a => !a.id || !existingIds.has(a.id));
+    const toUpdate = newAssets.filter(a => a.id && existingIds.has(a.id));
+    const toDelete = existingAssets.filter(a => !newIds.has(a.id));
+    
+    // Process creates
+    const createPromises = toCreate.map(asset => 
+      this.createAsset(userId, asset, assetType)
+    );
+    
+    // Process updates
+    const updatePromises = toUpdate.map(asset => 
+      this.updateAsset(asset.id, asset, assetType)
+    );
+    
+    // Process deletes
+    const deletePromises = toDelete.map(asset => 
+      this.deleteAsset(asset.id)
+    );
+    
+    // Wait for all operations to complete
+    await Promise.all([
+      ...createPromises,
+      ...updatePromises,
+      ...deletePromises
+    ]);
   }
 };
 

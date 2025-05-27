@@ -58,9 +58,12 @@ const defaultPersonalLoan: PersonalLoan = {
 
 const debtStatusOptions = [
   { value: 'current', label: 'Current' },
-  { value: 'pastDue', label: 'Past Due' },
-  { value: 'inCollections', label: 'In Collections' },
-  { value: 'inDefault', label: 'In Default' }
+  { value: 'past_due', label: 'Past Due' },
+  { value: 'in_grace_period', label: 'In Grace' },
+  { value: 'delinquent', label: 'Delinquent' },
+  { value: 'in_collection', label: 'In Collection' },
+  { value: 'default', label: 'In Default' },
+  { value: 'paid_off', label: 'Paid Off' }
 ];
 
 const purposeOptions = [
@@ -84,6 +87,20 @@ function PersonalLoanForm({ personalLoans, onAdd, onUpdate, onRemove }: Personal
     ...defaultPersonalLoan,
     id: generateId()
   });
+
+  // Helper function to safely format numeric values
+  const formatRate = (rate: number): string => {
+    const numRate = rate || 0;
+    return numRate.toFixed(2);
+  };
+
+  // Helper function to safely format remaining term
+  const formatRemainingTerm = (months: number): string => {
+    const numMonths = months || 0;
+    const years = Math.floor(numMonths / 12);
+    const remainingMonths = numMonths % 12;
+    return `${years} years, ${remainingMonths} months`;
+  };
 
   // Handle text field changes
   const handleTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,8 +189,8 @@ function PersonalLoanForm({ personalLoans, onAdd, onUpdate, onRemove }: Personal
                   <TableCell>{loan.purpose}</TableCell>
                   <TableCell>{formatCurrency(loan.currentBalance)}</TableCell>
                   <TableCell>{formatCurrency(loan.monthlyPayment)}</TableCell>
-                  <TableCell>{loan.interestRate.toFixed(2)}%</TableCell>
-                  <TableCell>{Math.floor(loan.remainingTerm / 12)} years, {loan.remainingTerm % 12} months</TableCell>
+                  <TableCell>{formatRate(Number(loan.interestRate))}%</TableCell>
+                  <TableCell>{formatRemainingTerm(Number(loan.remainingTerm))}</TableCell>
                   <TableCell>
                     {loan.isSecured ? (
                       <Chip label="Secured" color="primary" size="small" />

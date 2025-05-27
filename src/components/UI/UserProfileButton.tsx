@@ -1,9 +1,12 @@
 // components/UI/UserProfileButton.tsx
 import { UserButton, useUser } from '@clerk/clerk-react';
+// import { UserContext } from '../../context/UserContext';
+// import { useContext } from 'react';
 
 export default function UserProfileButton() {
 
   const {user} = useUser()
+  // const {userInfo} = useContext(UserContext)
   
   return (
     <div className="relative shadow-2xl rounded-l-4xl grow bg-white">

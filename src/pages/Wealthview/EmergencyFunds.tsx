@@ -3,22 +3,49 @@
 // src/components/EmergencyFunds/EmergencyFundsForm.tsx
 // @ts-nocheck at the top of files to ignore all errors in that file
 
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
   Box,
   Typography,
   Button,
   SelectChangeEvent,
+  CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { EmergencyFundsForm as FormType, EmergencySavingsAccount, EmergencyFundUsage, SafetyNet } from '../../types';
 import { generateId, calculateTotalSavings } from '../../utils/emergencyFund';
 import CurrentSavingsSection from './emergency-form/CurrentSavingsSection';
 import FundCoverageSection from './emergency-form/FundCoverageSection';
+import emergencyFundService from '../../services/emergencyFund.service';
+import { UserContext } from '../../context/UserContext';
+import { useUser, useAuth } from '@clerk/clerk-react';
 // Import other sections as they are created
 
 const EmergencyFunds = () => {
-  // Initial form state
+  const { getToken } = useAuth();
+  const { userInfo } = useContext(UserContext);
+  
+  // Capture userId once and never change it (prevents Clerk refresh issues)
+  const userIdRef = useRef<string | null>(null);
+  const hasLoadedRef = useRef(false);
+
+  // Set userId only once when component mounts
+  if (!userIdRef.current &&  userInfo?.id) {
+    userIdRef.current = userInfo?.id;
+  }
+
+  // Loading and error states
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSavingSavings, setIsSavingSavings] = useState(false);
+  const [isSavingCoverage, setIsSavingCoverage] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Original data from backend (for change tracking)
+  const [originalData, setOriginalData] = useState<FormType | null>(null);
+
+  // Current form data
   const [formData, setFormData] = useState<FormType>({
     // Current emergency savings
     totalEmergencySavings: 0,
@@ -52,8 +79,75 @@ const EmergencyFunds = () => {
     dependentCount: 0
   });
 
-  // Form display mode vs edit mode
-  const [isEditing, setIsEditing] = useState(false);
+  // Section editing states
+  const [isEditingSavings, setIsEditingSavings] = useState(false);
+  const [isEditingCoverage, setIsEditingCoverage] = useState(false);
+
+  // Helper function to get auth token
+  const getAuthToken = async () => {
+    try {
+      const token = await getToken({ template: "noyack" });
+      if (token) {
+        emergencyFundService.setAuthToken(token);
+      }
+      return token;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  };
+
+  // Load data once when component mounts - NO DEPENDENCIES TO PREVENT CLERK REFRESHES
+  useEffect(() => {
+    const loadData = async () => {
+      // Only load if we have a userId and haven't loaded yet
+      if (!userIdRef.current || hasLoadedRef.current) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        
+        // Get auth token
+        await getAuthToken();
+
+        const data = await emergencyFundService.getEmergencyFund(userIdRef.current);
+        setFormData(data);
+        setOriginalData(JSON.parse(JSON.stringify(data)));
+        setError(null);
+        hasLoadedRef.current = true;
+      } catch (error: unknown) {
+        console.error('Error loading emergency fund data:', error);
+        setError('Failed to load emergency fund data. Using default values.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []); // NO DEPENDENCIES - load once and never again
+
+  // Utility function to check if savings section has changes
+  const hasSavingsChanges = () => {
+    if (!originalData) return false;
+    
+    // Check if savings accounts have changed
+    const currentSavingsJson = JSON.stringify(formData.savingsAccounts.sort((a, b) => a.id.localeCompare(b.id)));
+    const originalSavingsJson = JSON.stringify(originalData.savingsAccounts.sort((a, b) => a.id.localeCompare(b.id)));
+    
+    return currentSavingsJson !== originalSavingsJson;
+  };
+
+  // Utility function to check if coverage section has changes
+  const hasCoverageChanges = () => {
+    if (!originalData) return false;
+    
+    return (
+      formData.monthlyEssentialExpenses !== originalData.monthlyEssentialExpenses ||
+      formData.targetCoverageMonths !== originalData.targetCoverageMonths
+    );
+  };
 
   // Handle text field changes
   const handleTextFieldChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +190,7 @@ const EmergencyFunds = () => {
   // Handle adding a new emergency savings account
   const addSavingsAccount = () => {
     const newAccount: EmergencySavingsAccount = {
-      id: generateId(),
+      id: `temp-${Date.now()}`, // Use temporary ID for new accounts
       accountType: "High-yield savings account",
       institution: "",
       amount: 0,
@@ -128,161 +222,283 @@ const EmergencyFunds = () => {
     });
   };
 
-  // Handle adding emergency fund usage history
-  const addUsageHistory = () => {
-    const newUsage: EmergencyFundUsage = {
-      id: generateId(),
-      date: "",
-      amount: 0,
-      purpose: "",
-      replenishmentTime: 0
-    };
+  // Save current emergency savings section only
+  const handleSaveSavings = async () => {
+    if (!userIdRef.current || !originalData) {
+      setError('Unable to save: missing user data');
+      return;
+    }
+
+    if (!hasSavingsChanges()) {
+      setSuccessMessage('No changes to save in current savings section');
+      return;
+    }
+
+    try {
+      setIsSavingSavings(true);
+      setError(null);
+
+      // Get fresh auth token for saving
+      await getAuthToken();
+
+      // Create updated form data with recalculated total
+      const updatedTotalSavings = calculateTotalSavings(formData.savingsAccounts);
+      const updatedFormData = { ...formData, totalEmergencySavings: updatedTotalSavings };
+
+      // Save using the full save method since we need to handle savings accounts
+      await emergencyFundService.saveEmergencyFund(userIdRef.current, updatedFormData);
+      
+      // Update both form data and original data
+      setFormData(updatedFormData);
+      setOriginalData(JSON.parse(JSON.stringify(updatedFormData)));
+      setIsEditingSavings(false);
+      setSuccessMessage('Current emergency savings saved successfully!');
+    } catch (error: unknown) {
+      console.error('Error saving emergency savings:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save emergency savings';
+      setError(errorMessage);
+    } finally {
+      setIsSavingSavings(false);
+    }
+  };
+
+  // Save emergency fund coverage section only
+  const handleSaveCoverage = async () => {
+    if (!userIdRef.current || !originalData) {
+      setError('Unable to save: missing user data');
+      return;
+    }
+
+    if (!hasCoverageChanges()) {
+      setSuccessMessage('No changes to save in coverage section');
+      return;
+    }
+
+    try {
+      setIsSavingCoverage(true);
+      setError(null);
+
+      // Get fresh auth token for saving
+      await getAuthToken();
+
+      // Use partial update for coverage fields only
+      await emergencyFundService.updateEmergencyFundPartial(
+        userIdRef.current, 
+        originalData, 
+        formData, 
+        ['monthlyEssentialExpenses', 'targetCoverageMonths']
+      );
+      
+      // Update original data with current form data
+      setOriginalData(JSON.parse(JSON.stringify(formData)));
+      setIsEditingCoverage(false);
+      setSuccessMessage('Emergency fund coverage saved successfully!');
+    } catch (error: unknown) {
+      console.error('Error saving coverage:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save coverage information';
+      setError(errorMessage);
+    } finally {
+      setIsSavingCoverage(false);
+    }
+  };
+
+  // Cancel savings section editing
+  const handleCancelSavingsEdit = () => {
+    if (!originalData) return;
     
+    // Restore original savings data
     setFormData({
       ...formData,
-      usageHistory: [...formData.usageHistory, newUsage]
+      savingsAccounts: [...originalData.savingsAccounts],
+      totalEmergencySavings: originalData.totalEmergencySavings
     });
+    setIsEditingSavings(false);
   };
 
-  // Handle updating emergency fund usage history
-  const updateUsageHistory = (id: string, updatedUsage: EmergencyFundUsage) => {
-    setFormData({
-      ...formData,
-      usageHistory: formData.usageHistory.map(usage => 
-        usage.id === id ? updatedUsage : usage
-      )
-    });
-  };
-
-  // Handle removing emergency fund usage history
-  const removeUsageHistory = (id: string) => {
-    setFormData({
-      ...formData,
-      usageHistory: formData.usageHistory.filter(usage => usage.id !== id)
-    });
-  };
-
-  // Handle adding a credit line safety net
-  const addCreditLine = () => {
-    const newCreditLine: SafetyNet = {
-      id: generateId(),
-      type: "Credit card",
-      details: "",
-      limit: 0,
-      available: 0
-    };
+  // Cancel coverage section editing
+  const handleCancelCoverageEdit = () => {
+    if (!originalData) return;
     
+    // Restore original coverage data
     setFormData({
       ...formData,
-      creditLines: [...formData.creditLines, newCreditLine]
+      monthlyEssentialExpenses: originalData.monthlyEssentialExpenses,
+      targetCoverageMonths: originalData.targetCoverageMonths
     });
+    setIsEditingCoverage(false);
   };
 
-  // Handle updating a credit line safety net
-  const updateCreditLine = (id: string, updatedCreditLine: SafetyNet) => {
-    setFormData({
-      ...formData,
-      creditLines: formData.creditLines.map(creditLine => 
-        creditLine.id === id ? updatedCreditLine : creditLine
-      )
-    });
+  // Close error/success messages
+  const handleCloseSnackbar = () => {
+    setError(null);
+    setSuccessMessage(null);
   };
 
-  // Handle removing a credit line safety net
-  const removeCreditLine = (id: string) => {
-    setFormData({
-      ...formData,
-      creditLines: formData.creditLines.filter(creditLine => creditLine.id !== id)
-    });
-  };
-
-  // Handle adding insurance coverage
-  const addInsuranceCoverage = () => {
-    const newInsurance: SafetyNet = {
-      id: generateId(),
-      type: "Health insurance",
-      details: ""
-    };
-    
-    setFormData({
-      ...formData,
-      insuranceCoverage: [...formData.insuranceCoverage, newInsurance]
-    });
-  };
-
-  // Handle updating insurance coverage
-  const updateInsuranceCoverage = (id: string, updatedInsurance: SafetyNet) => {
-    setFormData({
-      ...formData,
-      insuranceCoverage: formData.insuranceCoverage.map(insurance => 
-        insurance.id === id ? updatedInsurance : insurance
-      )
-    });
-  };
-
-  // Handle removing insurance coverage
-  const removeInsuranceCoverage = (id: string) => {
-    setFormData({
-      ...formData,
-      insuranceCoverage: formData.insuranceCoverage.filter(insurance => insurance.id !== id)
-    });
-  };
-
-  // Submit form and switch to display mode
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    // Update the total emergency savings based on accounts
-    setFormData({
-      ...formData,
-      totalEmergencySavings: calculateTotalSavings(formData.savingsAccounts)
-    });
-    setIsEditing(false);
-    // Here you would typically save the data or pass it to parent components
-  };
+  if (isLoading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+        <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>Loading emergency fund data...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>Emergency Funds</Typography>
+      <Typography variant="h4" fontSize={{xs:"24px", md:"34px"}} gutterBottom>Emergency Funds</Typography>
       
-      {isEditing ? (
-        <form onSubmit={handleSubmit}>
-          {/* Current Savings Section */}
-          <CurrentSavingsSection 
-            savingsAccounts={formData.savingsAccounts}
-            updateSavingsAccount={updateSavingsAccount}
-            removeSavingsAccount={removeSavingsAccount}
-            addSavingsAccount={addSavingsAccount}
-          />
-          
-          {/* Emergency Fund Coverage Section */}
-          <FundCoverageSection 
-            monthlyEssentialExpenses={formData.monthlyEssentialExpenses}
-            targetCoverageMonths={formData.targetCoverageMonths}
-            totalSavings={calculateTotalSavings(formData.savingsAccounts)}
-            handleTextFieldChange={handleTextFieldChange}
-            handleSliderChange={handleSliderChange}
-          />
-          
-          {/* Add other sections here as they are implemented */}
-          
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-            <Button type="submit" variant="contained" color="primary" size="large">
-              Save Emergency Fund Information
+      {/* Current Savings Section */}
+      <Box sx={{ mb: 4 }}>
+        {isEditingSavings ? (
+          <Box>
+            <CurrentSavingsSection 
+              savingsAccounts={formData.savingsAccounts}
+              updateSavingsAccount={updateSavingsAccount}
+              removeSavingsAccount={removeSavingsAccount}
+              addSavingsAccount={addSavingsAccount}
+            />
+            
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+              <Button 
+                variant="outlined" 
+                color="secondary" 
+                size="large"
+                onClick={handleCancelSavingsEdit}
+                disabled={isSavingSavings}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                size="large"
+                onClick={handleSaveSavings}
+                disabled={isSavingSavings || !hasSavingsChanges()}
+              >
+                {isSavingSavings ? (
+                  <>
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Current Savings'
+                )}
+              </Button>
+            </Box>
+          </Box>
+        ) : (
+          <Box>
+            {/* Display current savings summary */}
+            <Typography variant="h6" gutterBottom>Current Emergency Savings</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Total Emergency Savings: ${formData.totalEmergencySavings.toLocaleString()}
+            </Typography>
+            
+            {formData.savingsAccounts.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>Savings Accounts:</Typography>
+                {formData.savingsAccounts.map((account, index) => (
+                  <Typography key={account.id} variant="body2" sx={{ ml: 2 }}>
+                    {index + 1}. {account.accountType} at {account.institution || 'N/A'}: ${account.amount.toLocaleString()}
+                  </Typography>
+                ))}
+              </Box>
+            )}
+            
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              onClick={() => setIsEditingSavings(true)}
+              sx={{ mb: 2 }}
+            >
+              Edit Current Savings
             </Button>
           </Box>
-        </form>
-      ) : (
-        <Box>
-          {/* Display summary view when not in edit mode */}
-          {/* EmergencySummaryView will be implemented later */}
-          
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-            <Button variant="outlined" color="primary" onClick={() => setIsEditing(true)}>
-              Edit Emergency Fund Information
+        )}
+      </Box>
+
+      {/* Emergency Fund Coverage Section */}
+      <Box sx={{ mb: 4 }}>
+        {isEditingCoverage ? (
+          <Box>
+            <FundCoverageSection 
+              monthlyEssentialExpenses={formData.monthlyEssentialExpenses}
+              targetCoverageMonths={formData.targetCoverageMonths}
+              totalSavings={calculateTotalSavings(formData.savingsAccounts)}
+              handleTextFieldChange={handleTextFieldChange}
+              handleSliderChange={handleSliderChange}
+            />
+            
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+              <Button 
+                variant="outlined" 
+                color="secondary" 
+                size="large"
+                onClick={handleCancelCoverageEdit}
+                disabled={isSavingCoverage}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                size="large"
+                onClick={handleSaveCoverage}
+                disabled={isSavingCoverage || !hasCoverageChanges()}
+              >
+                {isSavingCoverage ? (
+                  <>
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Coverage Settings'
+                )}
+              </Button>
+            </Box>
+          </Box>
+        ) : (
+          <Box>
+            {/* Display coverage summary */}
+            <Typography variant="h6" gutterBottom>Emergency Fund Coverage</Typography>
+            <Typography variant="body1">
+              Monthly Essential Expenses: ${formData.monthlyEssentialExpenses.toLocaleString()}
+            </Typography>
+            <Typography variant="body1">
+              Target Coverage: {formData.targetCoverageMonths} months
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Current Coverage: {formData.monthlyEssentialExpenses > 0 
+                ? (formData.totalEmergencySavings / formData.monthlyEssentialExpenses).toFixed(1) 
+                : '0'} months
+            </Typography>
+            
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              onClick={() => setIsEditingCoverage(true)}
+            >
+              Edit Coverage Settings
             </Button>
           </Box>
-        </Box>
-      )}
+        )}
+      </Box>
+
+      {/* Snackbar for success/error messages */}
+      <Snackbar 
+        open={!!error || !!successMessage} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={error ? 'error' : 'success'}
+          sx={{ width: '100%' }}
+        >
+          {error || successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

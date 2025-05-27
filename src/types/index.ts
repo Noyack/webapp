@@ -19,6 +19,7 @@ export interface User {
   }>;
   hasCompletedOnboarding: boolean;
   onboarding: boolean;
+  plaidUserToken?: string;
   imageUrl: string;
 }
 
@@ -185,7 +186,7 @@ export interface OnboardingProps {
   onComplete?: (data: OnboardingState['data']) => void;
 }
 
-export interface StepProps {
+export interface OnboardStepProps {
   setStep: (step: number) => void;
   data?: OnboardingState['data'];
   updateData?: (data: Partial<OnboardingState['data']>) => void;
@@ -675,7 +676,7 @@ export type LiquidAsset = BaseAsset & {
 
 // Investment Assets
 export type InvestmentAsset = BaseAsset & {
-  type: 'stock' | 'bond' | 'mutualFund' | 'etf' | 'reit' | 'crypto' | 'options' | 'alternative' | 'other';
+  type: 'stock' | 'bond' | 'mutualFund' | 'etf' | 'reit' | 'crypto' | 'options' | 'alternative' | 'fixedIncome' | 'commodities' | 'other';
   ticker?: string;
   shares?: number;
   purchasePrice?: number;
@@ -725,9 +726,9 @@ export type AssetAllocation = {
   stocks: number;
   bonds: number;
   cash: number;
-  realEstate: number;
+  realEstate?: number;
   alternatives: number;
-  other: number;
+  other?: number;
 };
 
 // Form Data
@@ -815,18 +816,36 @@ export interface BaseDebt {
   currentBalance: number;
   interestRate: number;
   monthlyPayment: number;
-  remainingTerm: number; // in months
-  originalTerm: number; // in months
+  remainingTerm: number;
+  originalTerm: number;
   isJoint: boolean;
-  status: 'current' | 'pastDue' | 'inCollections' | 'inDefault';
+  status: 'current' | 'past_due' | 'delinquent' | 'in_collection' | 'default' | 'paid_off' | 'in_grace_period';
   hasCollateral: boolean;
   collateralDescription?: string;
   hasCosigner: boolean;
   cosignerName?: string;
   notes: string;
+  
+  // Special properties for each debt type will be stored in the 'extra' JSON field in the database
+  // The debt service will handle moving specialized fields in and out of this object
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  extra?: Record<string, any>;
 }
 
+export interface CreditCard extends BaseDebt {
+  // Credit card specific fields that will be stored in the 'extra' JSON field in the database
+  // but are accessed directly on the object in the frontend
+  creditLimit: number;
+  minimumPayment: number;
+  annualFee: number;
+  rewardProgram: string;
+  utilizationRatio: number;
+  balanceTransferOffersAvailable: boolean;
+}
+
+// Mortgage interface with specific properties
 export interface Mortgage extends BaseDebt {
+  // Mortgage specific fields
   propertyValue: number;
   mortgageType: 'conventional' | 'fha' | 'va' | 'interestOnly' | 'adjustableRate' | 'other';
   propertyAddress: string;
@@ -835,14 +854,18 @@ export interface Mortgage extends BaseDebt {
   refinancePlans: string;
 }
 
+// AutoLoan interface with specific properties
 export interface AutoLoan extends BaseDebt {
+  // Auto loan specific fields
   vehicleValue: number;
   vehicleDescription: string;
   isLease: boolean;
-  leaseEndDate?: string; // ISO date string
+  leaseEndDate?: string;
 }
 
+// StudentLoan interface with specific properties
 export interface StudentLoan extends BaseDebt {
+  // Student loan specific fields
   loanType: 'federal' | 'private' | 'mixed';
   repaymentPlan: 'standard' | 'incomeBased' | 'graduatedRepayment' | 'extendedRepayment' | 'other';
   forgivenessProgramEligible: boolean;
@@ -851,34 +874,35 @@ export interface StudentLoan extends BaseDebt {
   refinancingConsidered: boolean;
 }
 
-export interface CreditCard extends BaseDebt {
-  creditLimit: number;
-  minimumPayment: number;
-  annualFee: number;
-  rewardProgram: string;
-  utilizationRatio: number; // calculated field (currentBalance / creditLimit)
-  balanceTransferOffersAvailable: boolean;
-}
-
+// PersonalLoan interface with specific properties
 export interface PersonalLoan extends BaseDebt {
+  // Personal loan specific fields
   purpose: string;
   isSecured: boolean;
 }
 
+// OtherDebt interface with specific properties
 export interface OtherDebt extends BaseDebt {
+  // Other debt specific fields
   debtType: 'homeEquity' | 'business' | 'family' | 'medical' | 'tax' | 'other';
-  specificType?: string; // If "other" is selected
+  specificType?: string;
   paymentPlan?: string;
   specialTerms?: string;
 }
 
+
+
+
 export interface DebtProfileForm {
+  // Collections of different debt types
   mortgages: Mortgage[];
   autoLoans: AutoLoan[];
   studentLoans: StudentLoan[];
   creditCards: CreditCard[];
   personalLoans: PersonalLoan[];
   otherDebts: OtherDebt[];
+  
+  // Debt strategy information
   debtStrategy: {
     currentStrategy: 'avalanche' | 'snowball' | 'highestInterestFirst' | 'lowestBalanceFirst' | 'none' | 'other';
     customStrategy?: string;
@@ -1128,3 +1152,417 @@ export type PersonalInfoForm = {
   majorInvestmentTimeHorizon: number;
   lifestyleSacrifice: number;
 };
+
+
+// export type PlaidAccounts = {
+//   accounts: never[];
+//   account_id: string;
+//   name: string;
+//   official_name: string | null;
+//   type: string;
+//   subtype: string;
+//   balances: {
+//     available: number | null;
+//     current: number | null;
+//     limit: number | null;
+//     iso_currency_code: string;
+//   };
+//   mask: string;
+//   holder_category: string;
+// }
+
+export type PlaidAccount = {
+  account_id: string;
+  name: string;
+  type: string;
+  subtype: string;
+  balances: {
+    available: number | null;
+    current: number | null;
+    limit: number | null;
+    iso_currency_code?: string;
+  };
+  mask: string;
+}
+
+export type PlaidAccountsData = {
+  accounts: PlaidAccount[];
+  item: {
+    institution_id: string;
+    name?: string;
+  };
+}
+
+export type Transactions = {
+  transactions: TransactionItem[]
+}
+export type TransactionItem =  {
+    transaction_id: string;
+    date: string;
+    name: string;
+    amount: number;
+    category: string[];
+    pending: boolean;
+  }
+
+  export type IdentityOwner = {
+    names: string[];
+    phone_numbers: {
+      data: string;
+      primary: boolean;
+      type: string;
+    }[];
+    emails: {
+      data: string;
+      primary: boolean;
+      type: string;
+    }[];
+    addresses: {
+      data: {
+        street: string;
+        city: string;
+        region: string;
+        postal_code: string;
+        country: string;
+      };
+      primary: boolean;
+    }[];
+  }
+  
+  export type IdentityData = {
+    accounts: {
+      account_id: string;
+      balances: {
+        available: number;
+        current: number;
+        limit: number | null;
+      };
+      mask: string;
+      name: string;
+      official_name: string | null;
+      subtype: string;
+      type: string;
+      owners: IdentityOwner[];
+    }[];
+    item: {
+      institution_id: string;
+      institution_name: string;
+    };
+  }
+
+  export type PlaidInvestmentTransaction = {
+    investment_transaction_id: string;
+    account_id: string;
+    security_id: string;
+    date: string;
+    name: string;
+    quantity: number;
+    amount: number;
+    price: number;
+    fees: number | null;
+    type: string;
+    subtype: string;
+    iso_currency_code: string;
+  }
+
+  export type PlaidInvestmentTransactions = {
+    total_investment_transactions: number;
+    securities: Security[];
+    investment_transactions: PlaidInvestmentTransaction[];
+    accounts: PlaidAccount[]
+  }
+
+  export type Security = {
+    security_id: string;
+    name: string;
+    ticker_symbol: string;
+    type: string;
+    close_price: number;
+    close_price_as_of: string;
+  }
+
+  export type PlaidPortfolio = {
+    holdings: Holding[];
+    securities: Security[];
+    accounts: PlaidAccount[]
+  }
+  
+  export type Holding = {
+    account_id: string;
+    security_id: string;
+    quantity: number;
+    cost_basis: number | null;
+    institution_value: number | null;
+    institution_price: number | null;
+    institution_price_as_of: string | null;
+  }
+
+  export type PlaidCreditCardLiability = {
+    account_id: string;
+    aprs: {
+      apr_type: string;
+      apr_percentage: number;
+      balance_subject_to_apr: number;
+      interest_charge_amount: number;
+    }[];
+    is_overdue: boolean;
+    last_payment_amount: number;
+    last_payment_date: string;
+    last_statement_issue_date: string;
+    last_statement_balance: number;
+    minimum_payment_amount: number;
+    next_payment_due_date: string;
+  }
+  
+  export type PlaidStudentLoan = {
+    account_id: string;
+    account_number: string;
+    disbursement_dates: string[];
+    expected_payoff_date: string;
+    guarantor: string;
+    interest_rate_percentage: number;
+    is_overdue: boolean;
+    last_payment_amount: number;
+    last_payment_date: string;
+    last_statement_issue_date: string;
+    loan_name: string;
+    loan_status: {
+      type: string;
+      end_date: string;
+    };
+    minimum_payment_amount: number;
+    next_payment_due_date: string;
+    origination_date: string;
+    origination_principal_amount: number;
+    outstanding_interest_amount: number;
+    payment_reference_number: string;
+    pslf_status: {
+      estimated_eligibility_date: string;
+      payments_made: number;
+      payments_remaining: number;
+    };
+    repayment_plan: {
+      description: string;
+      type: string;
+    };
+    sequence_number: string;
+    servicer_address: {
+      city: string;
+      country: string;
+      postal_code: string;
+      region: string;
+      street: string;
+    };
+    ytd_interest_paid: number;
+    ytd_principal_paid: number;
+  }
+  
+  export type PlaidMortgage = {
+    account_id: string;
+    account_number: string;
+    current_late_fee: number;
+    escrow_balance: number;
+    has_pmi: boolean;
+    has_prepayment_penalty: boolean;
+    interest_rate: {
+      percentage: number;
+      type: string;
+    };
+    last_payment_amount: number;
+    last_payment_date: string;
+    loan_term: string;
+    loan_type_description: string;
+    maturity_date: string;
+    next_monthly_payment: number;
+    next_payment_due_date: string;
+    origination_date: string;
+    origination_principal_amount: number;
+    past_due_amount: number;
+    property_address: {
+      city: string;
+      country: string;
+      postal_code: string;
+      region: string;
+      street: string;
+    };
+    ytd_interest_paid: number;
+    ytd_principal_paid: number;
+    ytd_taxes_insurance_fees_paid: number;
+  }
+  
+  export type LiabilitiesData = {
+    credit: PlaidCreditCardLiability[];
+    mortgage: PlaidMortgage[];
+    student: PlaidStudentLoan[];
+  }
+  
+  export type PlaidLiabilities = {
+    accounts: PlaidAccount[];
+    item: [];
+    liabilities: LiabilitiesData
+  }
+
+  export type p_u_token = {
+    user_token: string;
+  }
+  
+  export type p_u_link = {
+    link_token: string;
+  }
+  
+  export type tokenExchangeMetaData = {
+    institution: string;
+    accounts: string;
+  }
+  
+
+
+// Windfall types
+export interface Windfall {
+  amount: number;
+  source: string;
+  taxable: boolean;
+}
+
+// Personal information types
+export interface PersonalInfo {
+  age: number;
+  taxBracket: number;
+  income: number;
+  monthlyExpenses: number;
+  timeHorizon: string; // 'short', 'medium', 'long'
+}
+
+// Debt types
+export interface Debt {
+  type: string;
+  balance: number;
+  interestRate: number;
+  minimumPayment: number;
+}
+
+// Investment types
+export interface Investment {
+  vehicle: string;
+  balance: number;
+}
+
+// Financial situation types
+export interface FinancialSituation {
+  emergencyFund: number;
+  retirementSavings: number;
+  hasEmergencyFund: boolean;
+  monthsOfExpenses: number;
+  debts: Debt[];
+  existingInvestments: Investment[];
+}
+
+// Large purchase types
+export interface LargePurchase {
+  type: string;
+  timeframe: number;
+  estimatedAmount: number;
+}
+
+// Goals and priorities types
+export interface Goals {
+  primaryGoal: string;
+  additionalGoals: string[];
+  plannedLargePurchases: LargePurchase[];
+  priorities: {
+    debtReduction: number;
+    emergencyFund: number;
+    retirement: number;
+    shortTermSavings: number;
+    longTermGrowth: number;
+  };
+}
+
+
+// Investment preferences types
+export interface InvestmentPreferences {
+  riskTolerance: string;
+  customAllocation: AssetAllocation;
+  preferredVehicles: string[];
+  excludedSectors: string[];
+  esgFocus: boolean;
+  feeSensitivity: string;
+  managementPreference: string;
+}
+
+// Recommendation type
+export interface Recommendation {
+  category: string;
+  action: string;
+  amount: number;
+  rationale: string;
+  vehicle: string;
+  allocation?: AssetAllocation;
+}
+
+// Projection type
+export interface Projection {
+  year: number;
+  value: number;
+  conservativeValue: number;
+  aggressiveValue: number;
+}
+
+// Debt payoff plan
+export interface DebtPayoffPlan {
+  [key: string]: {
+    originalBalance: number;
+    amountPaid: number;
+    remainingBalance: number;
+    interestSaved: number;
+  };
+}
+
+// Tax strategy
+export interface TaxStrategy {
+  strategy: string;
+  description: string;
+  potentialSavings: number | string;
+}
+
+// Category allocation
+export interface CategoryAllocation {
+  debtPayoff: number;
+  emergencyFund: number;
+  retirement: number;
+  shortTermGoals: number;
+  longTermInvestment: number;
+  education: number;
+  charity: number;
+  reserve: number;
+}
+
+// Optimization results types
+export interface OptimizationResults {
+  recommendations: Recommendation[];
+  allocationByCategory: CategoryAllocation;
+  projections: Projection[];
+  debtPayoffPlan: DebtPayoffPlan;
+}
+
+// Tax implications types
+export interface TaxImplications {
+  estimatedTaxImpact: number;
+  taxSavingStrategies: TaxStrategy[];
+}
+
+// Props for step components
+export interface StepProps {
+  windfall: Windfall;
+  setWindfall: (windfall: Windfall) => void;
+  personalInfo: PersonalInfo;
+  setPersonalInfo: (personalInfo: PersonalInfo) => void;
+  financialSituation: FinancialSituation;
+  setFinancialSituation: (financialSituation: FinancialSituation) => void;
+  goals: Goals;
+  setGoals: (goals: Goals) => void;
+  investmentPrefs: InvestmentPreferences;
+  setInvestmentPrefs: (investmentPrefs: InvestmentPreferences) => void;
+  optimizationResults: OptimizationResults;
+  taxImplications: TaxImplications;
+}

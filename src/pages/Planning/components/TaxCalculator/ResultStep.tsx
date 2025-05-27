@@ -32,6 +32,8 @@ import {
   Cell
 } from 'recharts';
 import { UserState, TaxResults } from '../../../../types';
+import ExportButtons from '../../../../components/ExportButtons';
+import { GenericExportData } from '../../../../utils/exportUtils';
 
 interface ResultsStepProps {
   userData: UserState;
@@ -46,6 +48,71 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
   isCalculating, 
   onCalculate 
 }) => {
+  
+  // Prepare export data
+  const prepareExportData = (): GenericExportData => {
+    if (!results) return { calculatorName: 'Tax Optimization Calculator', inputs: {}, keyMetrics: [], recommendations: [] };
+    
+    return {
+      calculatorName: 'Tax Optimization Calculator',
+      inputs: {
+        totalIncome: userData.income.w2Income + userData.income.selfEmploymentIncome + userData.income.businessIncome + userData.income.capitalGains + userData.income.dividends + userData.income.otherIncome,
+        w2Income: userData.income.w2Income,
+        selfEmploymentIncome: userData.income.selfEmploymentIncome,
+        businessIncome: userData.income.businessIncome,
+        capitalGains: userData.income.capitalGains,
+        dividends: userData.income.dividends,
+        otherIncome: userData.income.otherIncome,
+        filingStatus: userData.filingStatus,
+        state: userData.state,
+        dependents: userData.dependents,
+        age: userData.age,
+        retirement401k: userData.retirement['401k'],
+        retirementIRA: userData.retirement.ira,
+        retirementRothIRA: userData.retirement.rothIra,
+        retirementHSA: userData.retirement.hsa,
+        standardDeduction: userData.deductions.standardDeduction,
+        itemizedDeductions: userData.deductions.itemizedDeductions,
+        businessDeductions: userData.businessDeductions.total
+      },
+      keyMetrics: [
+        { label: 'Total Income', value: `$${results.totalIncome.toLocaleString()}` },
+        { label: 'Adjusted Gross Income', value: `$${results.adjustedGrossIncome.toLocaleString()}` },
+        { label: 'Taxable Income', value: `$${results.taxableIncome.toLocaleString()}` },
+        { label: 'Federal Tax', value: `$${Math.round(results.federalTax).toLocaleString()}` },
+        { label: 'State Tax', value: `$${Math.round(results.stateTax).toLocaleString()}` },
+        { label: 'FICA Tax', value: `$${Math.round(results.ficaTax).toLocaleString()}` },
+        { label: 'Total Tax', value: `$${Math.round(results.totalTax).toLocaleString()}` },
+        { label: 'Effective Tax Rate', value: `${results.effectiveTaxRate.toFixed(1)}%` },
+        { label: 'After-Tax Income', value: `$${Math.round(results.afterTaxIncome).toLocaleString()}` },
+        { label: 'Total Savings', value: `$${results.totalSavings.toLocaleString()}` },
+        { label: 'Savings Rate', value: `${results.savingsRate.toFixed(1)}%` }
+      ],
+      summary: {
+        totalIncome: results.totalIncome,
+        adjustedGrossIncome: results.adjustedGrossIncome,
+        taxableIncome: results.taxableIncome,
+        totalTax: results.totalTax,
+        effectiveTaxRate: results.effectiveTaxRate,
+        afterTaxIncome: results.afterTaxIncome,
+        totalSavings: results.totalSavings,
+        savingsRate: results.savingsRate,
+        unusedTaxSpace: results.unusedTaxSpace
+      },
+      tableData: [
+        { category: 'Federal Tax', amount: Math.round(results.federalTax) },
+        { category: 'State Tax', amount: Math.round(results.stateTax) },
+        { category: 'FICA Tax', amount: Math.round(results.ficaTax) },
+        ...(results.selfEmploymentTax > 0 ? [{ category: 'Self-Employment Tax', amount: Math.round(results.selfEmploymentTax) }] : [])
+      ],
+      recommendations: results.optimizationTips.length > 0 ? results.optimizationTips : [
+        'Your tax strategy looks well optimized! Continue your current approach.',
+        'Consider maximizing tax-advantaged account contributions',
+        'Review your tax strategy annually as laws and circumstances change',
+        'Consult with a tax professional for personalized advice'
+      ]
+    };
+  };
   
   return (
     <Box className="p-4">
@@ -296,6 +363,17 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
               </Card>
             </Grid>
           </Grid>
+
+          {/* Export Section */}
+          <Box sx={{ mt: 4, p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+            <Typography variant="h6" gutterBottom textAlign="center">
+              Export Your Tax Analysis
+            </Typography>
+            <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 2 }}>
+              Download your tax calculations, optimization strategies, and personalized recommendations
+            </Typography>
+            <ExportButtons data={prepareExportData()} />
+          </Box>
         </>
       ) : (
         <Box className="flex flex-col items-center justify-center py-12">

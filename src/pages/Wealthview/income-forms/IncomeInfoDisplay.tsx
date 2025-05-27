@@ -50,8 +50,17 @@ const IncomeInfoDisplay: React.FC<IncomeInfoDisplayProps> = ({
 
   return (
     <div>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button 
+          variant="outlined" 
+          color="primary" 
+          onClick={onEdit}
+          disabled={loading}
+        >
+          Edit Income Information
+        </Button>
+      </Box>
       <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h5" gutterBottom>Income Summary</Typography>
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" color="primary" gutterBottom>
             Employment Status: {formData.employmentStatus}
@@ -122,16 +131,6 @@ const IncomeInfoDisplay: React.FC<IncomeInfoDisplayProps> = ({
         </Paper>
       )}
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-        <Button 
-          variant="outlined" 
-          color="primary" 
-          onClick={onEdit}
-          disabled={loading}
-        >
-          Edit Income Information
-        </Button>
-      </Box>
     </div>
   );
 };

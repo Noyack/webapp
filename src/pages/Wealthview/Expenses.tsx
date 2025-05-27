@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { 
   Typography, 
   Button,
   Box,
   Paper,
   Tabs,
-  Tab
+  Tab,
+  CircularProgress,
+  Snackbar,
+  Alert
 } from "@mui/material";
 import { ExpenseInfoForm, ExpenseItem } from '../../types';
 import { generateId, getCategoryKey, getAllExpenses, calculateMonthlyEquivalent, formatCurrency } from '../../utils/expenseTracking';
@@ -15,6 +18,8 @@ import ExpenseSummaryView from './expenses-form/ExpenseSummaryView';
 import CategoryExpensePanel from './expenses-form/CategoryExpensePanel';
 import ExpenseTable from './expenses-form/ExpenseTable';
 import { Add } from '@mui/icons-material';
+import { expenseService } from '../../services/expense.service';
+import { UserContext } from '../../context/UserContext';
 
 function ExpenseInfo() {
   // Create initial empty form state
@@ -38,9 +43,25 @@ function ExpenseInfo() {
     businessExpenses: createEmptyExpenseCategory()
   };
 
+  // User context
+  const { userInfo } = useContext(UserContext);
+  
   // Form state
   const [formData, setFormData] = useState<ExpenseInfoForm>(initialFormState);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Notification state
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
   
   // Tab state
   const [tabValue, setTabValue] = useState(0);
@@ -65,6 +86,32 @@ function ExpenseInfo() {
   };
   
   const [currentExpense, setCurrentExpense] = useState<ExpenseItem>({...emptyExpense, id: generateId()});
+
+  // Load user expenses
+  useEffect(() => {
+    if (userInfo?.id) {
+      loadUserExpenses();
+    }
+  }, [userInfo?.id]);
+  
+  const loadUserExpenses = async () => {
+    if (!userInfo?.id) return;
+    
+    try {
+      setIsLoading(true);
+      const expenses = await expenseService.getUserExpenses(userInfo.id);
+      setFormData(expenses);
+    } catch (error) {
+      console.error('Failed to load expenses:', error);
+      setNotification({
+        show: true,
+        message: 'Failed to load expense data. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle tab change
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -154,9 +201,44 @@ function ExpenseInfo() {
   };
 
   // Submit entire form
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setIsEditing(false);
+    
+    if (!userInfo?.id) {
+      setNotification({
+        show: true,
+        message: 'User not authenticated. Please log in.',
+        type: 'error'
+      });
+      return;
+    }
+    
+    try {
+      setIsSaving(true);
+      await expenseService.saveExpenseData(userInfo.id, formData);
+      
+      setNotification({
+        show: true,
+        message: 'Expense information saved successfully!',
+        type: 'success'
+      });
+      
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to save expenses:', error);
+      setNotification({
+        show: true,
+        message: 'Failed to save expense data. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Close notification
+  const handleCloseNotification = () => {
+    setNotification({...notification, show: false});
   };
 
   // Calculate total monthly expenses for the header
@@ -169,9 +251,17 @@ function ExpenseInfo() {
     }, 0);
   };
 
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>Expense Information</Typography>
+      <Typography variant="h4" fontSize={{xs:"24px", md:"34px"}} gutterBottom>Expense Information</Typography>
       
       {isEditing ? (
         <form onSubmit={handleSubmit}>
@@ -317,14 +407,40 @@ function ExpenseInfo() {
           )}
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-            <Button type="submit" variant="contained" color="primary" size="large">
-              Save Expense Information
+            <Button 
+              type="submit" 
+              variant="contained" 
+              color="primary" 
+              size="large"
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save Expense Information'}
             </Button>
           </Box>
         </form>
       ) : (
-        <ExpenseSummaryView expenses={formData} onEdit={() => setIsEditing(true)} />
+        <ExpenseSummaryView 
+          expenses={formData} 
+          onEdit={() => setIsEditing(true)} 
+          isLoading={isLoading}
+        />
       )}
+      
+      {/* Notification */}
+      <Snackbar 
+        open={notification.show} 
+        autoHideDuration={6000} 
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseNotification} 
+          severity={notification.type} 
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

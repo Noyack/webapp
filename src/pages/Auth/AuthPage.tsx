@@ -2,8 +2,8 @@ import { useState } from 'react';
 import SignInComponent from './SignInComponent';
 import SignUpComponent from './SignUpComponent'; // Assuming you renamed the original SignInPage to SignUpComponent
 
-function AuthPage() {
-  const [showSignIn, setShowSignIn] = useState(false);
+function AuthPage({isMobile}:{isMobile:boolean}) {
+  const [showSignIn, setShowSignIn] = useState(true);
   
   // Toggle between sign in and sign up
   const toggleAuthMode = () => {
@@ -13,9 +13,9 @@ function AuthPage() {
   return (
     <>
       {showSignIn ? (
-        <SignInComponent onSwitchToSignUp={toggleAuthMode} />
+        <SignInComponent isMobile={isMobile} onSwitchToSignUp={toggleAuthMode} />
       ) : (
-        <SignUpComponent onSwitchToSignIn={toggleAuthMode} />
+        <SignUpComponent isMobile={isMobile} onSwitchToSignIn={toggleAuthMode} />
       )}
     </>
   );

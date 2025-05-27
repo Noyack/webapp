@@ -1,6 +1,6 @@
 import { Box, Button, Typography } from '@mui/material'
 import { Link } from 'react-router-dom' // Updated from 'react-router'
-import { ArrowForward, PollOutlined } from '@mui/icons-material'
+import { KeyboardArrowRightOutlined, PollOutlined } from '@mui/icons-material'
 import stock from './../../../assets/blank.jpg'
 import { useState } from 'react'
 import { 
@@ -95,19 +95,17 @@ const Community = ({ referralCode }: CommunityProps = {}) => {
   };
 
   return (
-    <Box className="flex flex-col gap-8">
-      <div className='flex justify-between'>
+    <Box className="flex flex-col gap-8 w-full ">
+      <div className='w-full  flex flex-col flex-wrap'>
         <Typography variant='h2' fontSize={"24px"} fontWeight={'medium'}>
           Noyack Community Updates
         </Typography>
-        <Link to="/">
-          <div className='flex gap-5 '>
-            <Typography>
-              See All Events
-            </Typography>
-            <ArrowForward />
-          </div>
-        </Link>
+        <div className="flex justify-end mt-2 mb-2">
+         <Link to={"/planning"} className="flex items-center text-sm">
+            See More
+            <KeyboardArrowRightOutlined fontSize="small" />
+          </Link>
+        </div>
       </div>
       
       <div className='flex flex-wrap gap-y-5 gap-x-10 justify-around px-5 mb-8'>

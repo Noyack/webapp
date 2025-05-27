@@ -224,6 +224,10 @@ button:focus-visible {
   font-family: 'Jeko', sans-serif !important;
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 a{
   text-decoration: none !important;
 }

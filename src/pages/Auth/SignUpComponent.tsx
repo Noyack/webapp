@@ -9,9 +9,6 @@ import { Google, Facebook } from '@mui/icons-material'
 // Define the OAuth strategies as string literals to match Clerk's expected values
 type OAuthStrategy = 'oauth_google' | 'oauth_facebook' | 'oauth_microsoft';
 
-interface SignUpComponentProps {
-  onSwitchToSignIn?: () => void;
-}
 
 // Microsoft icon component
 const MicrosoftIcon = () => (
@@ -23,7 +20,7 @@ const MicrosoftIcon = () => (
   </svg>
 )
 
-function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps) {
+function SignUpComponent({ isMobile, onSwitchToSignIn }: {isMobile:boolean, onSwitchToSignIn:()=>void}) {
   const { isLoaded, signUp, setActive } = useSignUp();
   
   // Form state
@@ -35,6 +32,8 @@ function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps) {
   const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+    const desktopView="min-h-screen grid grid-cols-[2fr_1fr] bg-[#F8F8F8] "
+  const MobileView="min-h-screen  bg-[#F8F8F8] "
 
   // Handle sign up form submission
   const handleSubmit = async (e: { preventDefault: () => void }) => {
@@ -136,12 +135,12 @@ function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps) {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-[2fr_1fr] bg-[#F8F8F8] "> 
+    <div className={isMobile?MobileView:desktopView}> 
       {/* Main Content - Flexible middle column */}
       <div className='flex justify-center'>
-        <main className="h-screen py-6 px-5 flex flex-col gap-[50px] justify-center content-center">
+        <main className={`h-screen py-6 px-5 flex flex-col ${isMobile?"gap-[10px]":"gap-[50px]"} justify-center content-center`}>
           <div className="flex flex-col gap-10">
-            <div className="flex gap-[35px]">
+            <div className={`flex ${isMobile?"flex-col w-full items-center":"gap-[35px]"} `}>
               <img src={Logo} className="w-50" alt="Noyack Logo"/>
               
               <div className='flex gap-[5px] items-center'>
@@ -159,7 +158,7 @@ function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps) {
           </div>
 
           <div className=''>
-            <Typography variant='h2' className='text-[39px] font-bold'>Explore our funds today</Typography>
+            <Typography variant={isMobile?'h4':'h2'} className='font-bold'>Explore our funds today</Typography>
             <Typography variant='caption' className='text-[16px]'>Create your free account and view our funds in just a few steps.</Typography>
           </div>
 
@@ -307,9 +306,9 @@ function SignUpComponent({ onSwitchToSignIn }: SignUpComponentProps) {
       </div>
 
       {/* Aside - Fixed width */}
-      <div className="form-aside h-screen sticky top-0 flex justify-center items-center p-8 ">
+      {!isMobile && <div className="form-aside h-screen sticky top-0 flex justify-center items-center p-8 ">
         <img src={AsideImage} className="aside-img rounded-[25px] object-cover" alt="Sign up imagery"/>
-      </div>
+      </div>}
     </div>
   )
 }

@@ -52,6 +52,7 @@ const defaultAutoLoan: AutoLoan = {
   hasCosigner: false,
   cosignerName: '',
   notes: '',
+  // Auto loan specific fields that will be stored in the extra JSON field
   vehicleValue: 0,
   vehicleDescription: '',
   isLease: false,
@@ -60,9 +61,12 @@ const defaultAutoLoan: AutoLoan = {
 
 const debtStatusOptions = [
   { value: 'current', label: 'Current' },
-  { value: 'pastDue', label: 'Past Due' },
-  { value: 'inCollections', label: 'In Collections' },
-  { value: 'inDefault', label: 'In Default' }
+  { value: 'past_due', label: 'Past Due' },
+  { value: 'in_grace_period', label: 'In Grace' },
+  { value: 'delinquent', label: 'Delinquent' },
+  { value: 'in_collection', label: 'In Collection' },
+  { value: 'default', label: 'In Default' },
+  { value: 'paid_off', label: 'Paid Off' }
 ];
 
 function AutoLoanForm({ autoLoans, onAdd, onUpdate, onRemove }: AutoLoanFormProps) {
@@ -72,6 +76,28 @@ function AutoLoanForm({ autoLoans, onAdd, onUpdate, onRemove }: AutoLoanFormProp
     ...defaultAutoLoan,
     id: generateId()
   });
+
+  // Helper function to safely format numeric values
+  const formatRate = (rate: number): string => {
+    const numRate = rate || 0;
+    return numRate.toFixed(2);
+  };
+
+  // Helper function to safely format LTV ratios
+  const formatLTV = (ratio: number): string => {
+    return ratio.toFixed(1);
+  };
+
+  // Calculate loan-to-value ratio
+  const calculateLTV = (autoLoan: AutoLoan): number => {
+    if (!autoLoan.vehicleValue) return 0;
+    return (autoLoan.currentBalance / autoLoan.vehicleValue) * 100;
+  };
+
+  // Check if vehicle is underwater (loan balance > value)
+  const isUnderwaterLoan = (autoLoan: AutoLoan): boolean => {
+    return Number(autoLoan.currentBalance) > Number(autoLoan.vehicleValue);
+  };
 
   // Handle text field changes
   const handleTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,17 +135,6 @@ function AutoLoanForm({ autoLoans, onAdd, onUpdate, onRemove }: AutoLoanFormProp
     });
   };
 
-  // Calculate loan-to-value ratio
-  const calculateLTV = (autoLoan: AutoLoan): number => {
-    if (!autoLoan.vehicleValue) return 0;
-    return (autoLoan.currentBalance / autoLoan.vehicleValue) * 100;
-  };
-
-  // Check if vehicle is underwater (loan balance > value)
-  const isUnderwaterLoan = (autoLoan: AutoLoan): boolean => {
-    return autoLoan.currentBalance > autoLoan.vehicleValue;
-  };
-
   // Reset form
   const resetForm = () => {
     setCurrentAutoLoan({ 
@@ -154,10 +169,6 @@ function AutoLoanForm({ autoLoans, onAdd, onUpdate, onRemove }: AutoLoanFormProp
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Lender</TableCell>
-                <TableCell>Vehicle</TableCell>
-                <TableCell>Current Balance</TableCell>
-                <TableCell>Monthly Payment</TableCell>
                 <TableCell>Interest Rate</TableCell>
                 <TableCell>Vehicle Value</TableCell>
                 <TableCell>LTV Ratio</TableCell>
@@ -165,28 +176,32 @@ function AutoLoanForm({ autoLoans, onAdd, onUpdate, onRemove }: AutoLoanFormProp
               </TableRow>
             </TableHead>
             <TableBody>
-              {autoLoans.map((loan) => (
+              {autoLoans.map((loan) => {
+                const ltv = calculateLTV(loan);
+                const underwater = isUnderwaterLoan(loan);
+                
+                return (
                 <TableRow key={loan.id}>
                   <TableCell>{loan.lender}</TableCell>
                   <TableCell>{loan.vehicleDescription}</TableCell>
                   <TableCell>{formatCurrency(loan.currentBalance)}</TableCell>
                   <TableCell>{formatCurrency(loan.monthlyPayment)}</TableCell>
-                  <TableCell>{loan.interestRate.toFixed(2)}%</TableCell>
+                  <TableCell>{formatRate(Number(loan.interestRate))}%</TableCell>
                   <TableCell>
-                    <Tooltip title={isUnderwaterLoan(loan) ? "Underwater loan: Vehicle worth less than loan balance" : ""}>
+                    <Tooltip title={underwater ? "Underwater loan: Vehicle worth less than loan balance" : ""}>
                       <Typography 
-                        color={isUnderwaterLoan(loan) ? "error" : "inherit"}
+                        color={underwater ? "error" : "inherit"}
                       >
                         {formatCurrency(loan.vehicleValue)}
                       </Typography>
                     </Tooltip>
                   </TableCell>
                   <TableCell>
-                    <Tooltip title={calculateLTV(loan) > 100 ? "Underwater loan" : ""}>
+                    <Tooltip title={ltv > 100 ? "Underwater loan" : ""}>
                       <Typography 
-                        color={calculateLTV(loan) > 100 ? "error" : "inherit"}
+                        color={ltv > 100 ? "error" : "inherit"}
                       >
-                        {calculateLTV(loan).toFixed(1)}%
+                        {formatLTV(ltv)}%
                       </Typography>
                     </Tooltip>
                   </TableCell>
@@ -199,7 +214,7 @@ function AutoLoanForm({ autoLoans, onAdd, onUpdate, onRemove }: AutoLoanFormProp
                     </IconButton>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
         </TableContainer>
@@ -398,7 +413,7 @@ function AutoLoanForm({ autoLoans, onAdd, onUpdate, onRemove }: AutoLoanFormProp
                   <Typography variant="caption" 
                     color={isUnderwaterLoan(currentAutoLoan) ? "error" : "inherit"}
                   >
-                    LTV Ratio: {calculateLTV(currentAutoLoan).toFixed(1)}%
+                    LTV Ratio: {formatLTV(calculateLTV(currentAutoLoan))}%
                     {isUnderwaterLoan(currentAutoLoan) && " (Underwater loan)"}
                   </Typography>
                 </Box>

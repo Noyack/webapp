@@ -6,6 +6,7 @@
   ],
   "compilerOptions": {
     "noEmitOnError": false,
+    
     // other options
   }
   

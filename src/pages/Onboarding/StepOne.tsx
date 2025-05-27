@@ -1,9 +1,9 @@
 import { useState } from "react";
 import InvestTypeCard from "./components/InvestTypeCard";
 import { Button, Typography } from "@mui/material";
-import { StepProps, UserTypeOption, ContactDetails, Address, IdentityDetails } from "../../types"; // Import types from types.ts
+import { OnboardStepProps, UserTypeOption, ContactDetails, Address, IdentityDetails } from "../../types"; // Import types from types.ts
 
-function StepOne({ setStep }: StepProps) {
+function StepOne({ setStep }: OnboardStepProps) {
   const [choice, setChoice] = useState<number | null>(1);
   const [stage, setStage] = useState<number>(1);
   const [formData, setFormData] = useState<{

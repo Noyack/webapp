@@ -52,6 +52,7 @@ const defaultCreditCard: CreditCard = {
   hasCosigner: false,
   cosignerName: '',
   notes: '',
+  // Credit card specific fields
   creditLimit: 0,
   minimumPayment: 0,
   annualFee: 0,
@@ -62,9 +63,11 @@ const defaultCreditCard: CreditCard = {
 
 const debtStatusOptions = [
   { value: 'current', label: 'Current' },
-  { value: 'pastDue', label: 'Past Due' },
-  { value: 'inCollections', label: 'In Collections' },
-  { value: 'inDefault', label: 'In Default' }
+  { value: 'past_due', label: 'Past Due' },
+  { value: 'delinquent', label: 'Delinquent' },
+  { value: 'in_collection', label: 'In Collection' },
+  { value: 'default', label: 'In Default' },
+  { value: 'paid_off', label: 'Paid Off' }
 ];
 
 function CreditCardDebtForm({ creditCards, onAdd, onUpdate, onRemove }: CreditCardDebtFormProps) {
@@ -74,6 +77,17 @@ function CreditCardDebtForm({ creditCards, onAdd, onUpdate, onRemove }: CreditCa
     ...defaultCreditCard,
     id: generateId()
   });
+
+  // Helper to safely format numbers
+  const formatRate = (rate: number): string => {
+    const numRate = rate || 0;
+    return numRate.toFixed(2);
+  };
+
+  const formatPercentage = (value: number): string => {
+    const numValue = value || 0;
+    return numValue.toFixed(1);
+  };
 
   // Handle text field changes
   const handleTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,14 +205,14 @@ function CreditCardDebtForm({ creditCards, onAdd, onUpdate, onRemove }: CreditCa
                   <TableCell>{card.accountLast4}</TableCell>
                   <TableCell>{formatCurrency(card.currentBalance)}</TableCell>
                   <TableCell>{formatCurrency(card.creditLimit)}</TableCell>
-                  <TableCell>{card.interestRate.toFixed(2)}%</TableCell>
-                  <TableCell>{formatCurrency(card.minimumPayment)}</TableCell>
+                  <TableCell>{formatRate(Number(card.interestRate))}%</TableCell>
+                  <TableCell>{formatCurrency(Number(card.minimumPayment))}</TableCell>
                   <TableCell>
-                    <Tooltip title={card.utilizationRatio > 30 ? "High utilization may impact credit score" : ""}>
+                    <Tooltip title={Number(card.utilizationRatio) > 30 ? "High utilization may impact credit score" : ""}>
                       <Typography 
-                        color={card.utilizationRatio > 30 ? "error" : "inherit"}
+                        color={Number(card.utilizationRatio) > 30 ? "error" : "inherit"}
                       >
-                        {card.utilizationRatio.toFixed(1)}%
+                        {formatPercentage(card.utilizationRatio)}%
                       </Typography>
                     </Tooltip>
                   </TableCell>
@@ -380,7 +394,7 @@ function CreditCardDebtForm({ creditCards, onAdd, onUpdate, onRemove }: CreditCa
                   variant="h6" 
                   color={currentCreditCard.utilizationRatio > 30 ? "error" : "inherit"}
                 >
-                  {currentCreditCard.utilizationRatio.toFixed(1)}%
+                  {formatPercentage(currentCreditCard.utilizationRatio)}%
                 </Typography>
                 {currentCreditCard.utilizationRatio > 30 && (
                   <Typography variant="caption" color="error">

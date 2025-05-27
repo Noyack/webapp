@@ -9,7 +9,7 @@ import {
 // import { Link } from 'react-router';
 import { UpcomingEvents } from '../UI/UpcomingEvents';
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 
 export default function Aside() {
     // const [member] = useState(false)

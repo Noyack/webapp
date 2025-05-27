@@ -51,6 +51,7 @@ const defaultStudentLoan: StudentLoan = {
   hasCosigner: false,
   cosignerName: '',
   notes: '',
+  // Student loan specific fields that will be stored in the extra JSON field
   loanType: 'federal',
   repaymentPlan: 'standard',
   forgivenessProgramEligible: false,
@@ -61,9 +62,12 @@ const defaultStudentLoan: StudentLoan = {
 
 const debtStatusOptions = [
   { value: 'current', label: 'Current' },
-  { value: 'pastDue', label: 'Past Due' },
-  { value: 'inCollections', label: 'In Collections' },
-  { value: 'inDefault', label: 'In Default' }
+  { value: 'past_due', label: 'Past Due' },
+  { value: 'in_grace_period', label: 'In Grace' },
+  { value: 'delinquent', label: 'Delinquent' },
+  { value: 'in_collection', label: 'In Collection' },
+  { value: 'default', label: 'In Default' },
+  { value: 'paid_off', label: 'Paid Off' }
 ];
 
 const loanTypeOptions = [
@@ -94,6 +98,17 @@ function StudentLoanForm({ studentLoans, onAdd, onUpdate, onRemove }: StudentLoa
     ...defaultStudentLoan,
     id: generateId()
   });
+
+  // Helper function to safely format numeric values
+  const formatRate = (rate: number): string => {
+    const numRate = Number(rate) || 0;
+    return numRate.toFixed(2);
+  };
+
+  // Safe getter for option labels
+  const getOptionLabel = (options: Array<{value: string, label: string}>, value: string): string => {
+    return options.find(option => option.value === value)?.label || value;
+  };
 
   // Handle text field changes
   const handleTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,16 +196,16 @@ function StudentLoanForm({ studentLoans, onAdd, onUpdate, onRemove }: StudentLoa
                   <TableCell>{loan.lender}</TableCell>
                   <TableCell>
                     <Chip 
-                      label={loanTypeOptions.find(option => option.value === loan.loanType)?.label || loan.loanType} 
+                      label={getOptionLabel(loanTypeOptions, loan.loanType)} 
                       color={loan.loanType === 'federal' ? 'primary' : 'default'} 
                       size="small"
                     />
                   </TableCell>
                   <TableCell>{formatCurrency(loan.currentBalance)}</TableCell>
                   <TableCell>{formatCurrency(loan.monthlyPayment)}</TableCell>
-                  <TableCell>{loan.interestRate.toFixed(2)}%</TableCell>
+                  <TableCell>{formatRate(Number(loan.interestRate))}%</TableCell>
                   <TableCell>
-                    {repaymentPlanOptions.find(option => option.value === loan.repaymentPlan)?.label || loan.repaymentPlan}
+                    {getOptionLabel(repaymentPlanOptions, loan.repaymentPlan)}
                   </TableCell>
                   <TableCell>
                     {loan.forgivenessProgramEligible ? (

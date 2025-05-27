@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck at the top of files to ignore all errors in that file
-
-import React from 'react';
 import { 
   Typography, 
   Box,
@@ -44,16 +40,15 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
 
     return categories.map(category => {
       const debts = debtProfile[category.key as keyof Omit<DebtProfileForm, 'debtStrategy'>] as BaseDebt[];
-      const totalAmount = debts.reduce((sum, debt) => sum + debt.currentBalance, 0);
+      const totalAmount = debts.reduce((sum, debt) => sum + Number(debt.currentBalance), 0);
       const percentage = totalDebt > 0 ? (totalAmount / totalDebt) * 100 : 0;
-      
       return {
         category: category.label,
         amount: totalAmount,
         percentage,
         count: debts.length
       };
-    }).filter(item => item.amount > 0).sort((a, b) => b.amount - a.amount);
+    }).filter(item => item.count > 0); // Only show categories with debts
   };
 
   // Calculate average interest rate weighted by debt amount
@@ -66,8 +61,11 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
     categories.forEach(category => {
       const debts = debtProfile[category as keyof Omit<DebtProfileForm, 'debtStrategy'>] as BaseDebt[];
       debts.forEach(debt => {
-        totalWeightedInterest += debt.currentBalance * debt.interestRate;
-        totalDebtForCalculation += debt.currentBalance;
+        const balance = Number(debt.currentBalance) || 0;
+        const rate = Number(debt.interestRate) || 0;
+        
+        totalWeightedInterest += balance * rate;
+        totalDebtForCalculation += balance;
       });
     });
     
@@ -91,10 +89,11 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
     categories.forEach(category => {
       const debts = debtProfile[category.key as keyof Omit<DebtProfileForm, 'debtStrategy'>] as BaseDebt[];
       debts.forEach(debt => {
-        if (debt.interestRate > highestRate) {
-          highestRate = debt.interestRate;
+        const interestRate = Number(debt.interestRate) || 0;
+        if (interestRate > highestRate) {
+          highestRate = interestRate;
           highestRateDebt = {
-            rate: debt.interestRate,
+            rate: interestRate,
             type: category.label,
             lender: debt.lender
           };
@@ -122,10 +121,11 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
     categories.forEach(category => {
       const debts = debtProfile[category.key as keyof Omit<DebtProfileForm, 'debtStrategy'>] as BaseDebt[];
       debts.forEach(debt => {
-        if (debt.interestRate < lowestRate && debt.interestRate > 0) {
-          lowestRate = debt.interestRate;
+        const interestRate = Number(debt.interestRate) || 0;
+        if (interestRate < lowestRate && interestRate > 0) {
+          lowestRate = interestRate;
           lowestRateDebt = {
-            rate: debt.interestRate,
+            rate: interestRate,
             type: category.label,
             lender: debt.lender
           };
@@ -148,12 +148,13 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
     categories.forEach(category => {
       const debts = debtProfile[category as keyof Omit<DebtProfileForm, 'debtStrategy'>] as BaseDebt[];
       debts.forEach(debt => {
-        if (debt.monthlyPayment > highestPayment) {
-          highestPayment = debt.monthlyPayment;
+        const monthlyPayment = Number(debt.monthlyPayment) || 0;
+        if (monthlyPayment > highestPayment) {
+          highestPayment = monthlyPayment;
           highestPaymentDebt = debt;
         }
-        if (debt.monthlyPayment < lowestPayment && debt.monthlyPayment > 0) {
-          lowestPayment = debt.monthlyPayment;
+        if (monthlyPayment < lowestPayment && monthlyPayment > 0) {
+          lowestPayment = monthlyPayment;
           lowestPaymentDebt = debt;
         }
       });
@@ -175,12 +176,51 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
   const highestInterestDebt = getHighestInterestDebt();
   const lowestInterestDebt = getLowestInterestDebt();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { highest: highestPaymentDebt, lowest: lowestPaymentDebt } = getExtremeMonthlyPaymentDebts();
+  const { highest: highestPaymentDebt, lowest: _lowestPaymentDebt } = getExtremeMonthlyPaymentDebts();
   const totalDebtCount = getTotalDebtCount();
+
+  // Safe formatting functions
+  const formatRate = (rate: number): string => {
+    const numRate = Number(rate) || 0;
+    return numRate.toFixed(2);
+  };
+
+  // Get a readable debt type name
+  // const getDebtTypeName = (debtType: string): string => {
+  //   const types: Record<string, string> = {
+  //     'mortgage': 'Mortgage',
+  //     'auto_loan': 'Auto Loan',
+  //     'student_loan': 'Student Loan',
+  //     'credit_card': 'Credit Card',
+  //     'personal_loan': 'Personal Loan',
+  //     'other': 'Other'
+  //   };
+  //   return types[debtType] || debtType;
+  // };
+
+  // Gets a status label for display
+  const formatStatus = (status: string): string => {
+    return status.split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  // Determine status color for chips
+  const getStatusColor = (status: string): 'success' | 'warning' | 'error' | 'default' => {
+    if (status === 'current' || status === 'paid_off') return 'success';
+    if (status === 'past_due' || status === 'in_grace_period') return 'warning';
+    if (status === 'delinquent' || status === 'in_collection' || status === 'default') return 'error';
+    return 'default';
+  };
 
   return (
     <div>
       <Box sx={{ mb: 4 }}>
+         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button variant="contained" color="primary" onClick={onEdit}>
+            Edit Debt Profile
+          </Button>
+        </Box>
         <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
           <Grid container spacing={4}>
             <Grid item xs={12} md={4}>
@@ -208,7 +248,7 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
                     {formatCurrency(totalMonthlyPayment)}
                   </Typography>
                   <Typography color="text.secondary">
-                    {(totalMonthlyPayment / totalDebt * 100).toFixed(1)}% of total debt per month
+                    {totalDebt > 0 ? ((totalMonthlyPayment / totalDebt) * 100).toFixed(1) : "0.0"}% of total debt per month
                   </Typography>
                 </CardContent>
               </Card>
@@ -231,50 +271,52 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
           </Grid>
         </Paper>
 
-        <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-          <Typography variant="h5" gutterBottom>Debt Breakdown</Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Debt Type</TableCell>
-                      <TableCell>Amount</TableCell>
-                      <TableCell>Accounts</TableCell>
-                      <TableCell>% of Total</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {debtBreakdown.map((item) => (
-                      <TableRow key={item.category}>
-                        <TableCell>{item.category}</TableCell>
-                        <TableCell>{formatCurrency(item.amount)}</TableCell>
-                        <TableCell>{item.count}</TableCell>
-                        <TableCell>{item.percentage.toFixed(1)}%</TableCell>
+        {debtBreakdown.length > 0 && (
+          <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+            <Typography variant="h5" gutterBottom>Debt Breakdown</Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Debt Type</TableCell>
+                        <TableCell>Amount</TableCell>
+                        <TableCell>Accounts</TableCell>
+                        <TableCell>% of Total</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              {debtBreakdown.map((item) => (
-                <Box key={item.category} sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">{item.category}</Typography>
-                    <Typography variant="body2">{formatCurrency(item.amount)} ({item.percentage.toFixed(1)}%)</Typography>
+                    </TableHead>
+                    <TableBody>
+                      {debtBreakdown.map((item) => (
+                        <TableRow key={item.category}>
+                          <TableCell>{item.category}</TableCell>
+                          <TableCell>{formatCurrency(item.amount)}</TableCell>
+                          <TableCell>{item.count}</TableCell>
+                          <TableCell>{item.percentage.toFixed(1)}%</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                {debtBreakdown.map((item) => (
+                  <Box key={item.category} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2">{item.category}</Typography>
+                      <Typography variant="body2">{formatCurrency(item.amount)} ({item.percentage.toFixed(1)}%)</Typography>
+                    </Box>
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={item.percentage} 
+                      sx={{ height: 10, borderRadius: 5 }}
+                    />
                   </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={item.percentage} 
-                    sx={{ height: 10, borderRadius: 5 }}
-                  />
-                </Box>
-              ))}
+                ))}
+              </Grid>
             </Grid>
-          </Grid>
-        </Paper>
+          </Paper>
+        )}
 
         <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
           <Typography variant="h5" gutterBottom>Key Insights</Typography>
@@ -284,7 +326,7 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
                 <Typography variant="subtitle1" fontWeight="bold">Highest Interest Rate</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                   <Chip 
-                    label={`${highestInterestDebt.rate.toFixed(2)}%`} 
+                    label={`${formatRate(Number(highestInterestDebt.rate))}%`} 
                     color="error" 
                     sx={{ mr: 1 }} 
                   />
@@ -298,7 +340,7 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
                 <Typography variant="subtitle1" fontWeight="bold">Lowest Interest Rate</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                   <Chip 
-                    label={`${lowestInterestDebt.rate.toFixed(2)}%`} 
+                    label={`${formatRate(Number(lowestInterestDebt.rate))}%`} 
                     color="success" 
                     sx={{ mr: 1 }} 
                   />
@@ -329,12 +371,12 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
               <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle1" fontWeight="bold">Current Debt Strategy</Typography>
                 <Typography sx={{ mt: 1 }}>
-                  {debtProfile.debtStrategy.currentStrategy === 'none' 
+                  {debtProfile.debtStrategy?.currentStrategy === 'none' 
                     ? 'No specific strategy defined' 
-                    : debtProfile.debtStrategy.currentStrategy.charAt(0).toUpperCase() + 
-                      debtProfile.debtStrategy.currentStrategy.slice(1).replace(/([A-Z])/g, ' $1')}
+                    : debtProfile.debtStrategy?.currentStrategy.charAt(0).toUpperCase() + 
+                      debtProfile.debtStrategy?.currentStrategy.slice(1).replace(/([A-Z])/g, ' $1')}
                 </Typography>
-                {debtProfile.debtStrategy.customStrategy && (
+                {debtProfile.debtStrategy?.customStrategy && (
                   <Typography variant="body2" color="text.secondary">
                     {debtProfile.debtStrategy.customStrategy}
                   </Typography>
@@ -345,88 +387,83 @@ function DebtSummary({ debtProfile, totalDebt, totalMonthlyPayment, onEdit }: De
         </Paper>
 
         {/* All Debts Detail Table */}
-        <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-          <Typography variant="h5" gutterBottom>All Debts</Typography>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Lender</TableCell>
-                  <TableCell>Current Balance</TableCell>
-                  <TableCell>Monthly Payment</TableCell>
-                  <TableCell>Interest Rate</TableCell>
-                  <TableCell>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {/* Combine all debts into one array for display */}
-                {(() => {
-                  const allDebts: Array<BaseDebt & { type: string }> = [];
-                  
-                  // Add mortgages
-                  debtProfile.mortgages.forEach(debt => {
-                    allDebts.push({...debt, type: 'Mortgage'});
-                  });
-                  
-                  // Add auto loans
-                  debtProfile.autoLoans.forEach(debt => {
-                    allDebts.push({...debt, type: 'Auto Loan'});
-                  });
-                  
-                  // Add student loans
-                  debtProfile.studentLoans.forEach(debt => {
-                    allDebts.push({...debt, type: 'Student Loan'});
-                  });
-                  
-                  // Add credit cards
-                  debtProfile.creditCards.forEach(debt => {
-                    allDebts.push({...debt, type: 'Credit Card'});
-                  });
-                  
-                  // Add personal loans
-                  debtProfile.personalLoans.forEach(debt => {
-                    allDebts.push({...debt, type: 'Personal Loan'});
-                  });
-                  
-                  // Add other debts
-                  debtProfile.otherDebts.forEach(debt => {
-                    allDebts.push({...debt, type: 'Other'});
-                  });
-                  
-                  // Sort by balance descending
-                  return allDebts
-                    .sort((a, b) => b.currentBalance - a.currentBalance)
-                    .map(debt => (
-                      <TableRow key={debt.id}>
-                        <TableCell>{debt.type}</TableCell>
-                        <TableCell>{debt.lender}</TableCell>
-                        <TableCell>{formatCurrency(debt.currentBalance)}</TableCell>
-                        <TableCell>{formatCurrency(debt.monthlyPayment)}</TableCell>
-                        <TableCell>{debt.interestRate.toFixed(2)}%</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={debt.status.charAt(0).toUpperCase() + debt.status.slice(1).replace(/([A-Z])/g, ' $1')} 
-                            color={
-                              debt.status === 'current' ? 'success' : 
-                              debt.status === 'pastDue' ? 'warning' : 'error'
-                            }
-                            size="small"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ));
-                })()}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
+        {totalDebtCount > 0 && (
+          <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+            <Typography variant="h5" gutterBottom>All Debts</Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Lender</TableCell>
+                    <TableCell>Current Balance</TableCell>
+                    <TableCell>Monthly Payment</TableCell>
+                    <TableCell>Interest Rate</TableCell>
+                    <TableCell>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {/* Combine all debts into one array for display */}
+                  {(() => {
+                    const allDebts: Array<BaseDebt & { type: string }> = [];
+                    
+                    // Add mortgages
+                    debtProfile.mortgages.forEach(debt => {
+                      allDebts.push({...debt, type: 'Mortgage'});
+                    });
+                    
+                    // Add auto loans
+                    debtProfile.autoLoans.forEach(debt => {
+                      allDebts.push({...debt, type: 'Auto Loan'});
+                    });
+                    
+                    // Add student loans
+                    debtProfile.studentLoans.forEach(debt => {
+                      allDebts.push({...debt, type: 'Student Loan'});
+                    });
+                    
+                    // Add credit cards
+                    debtProfile.creditCards.forEach(debt => {
+                      allDebts.push({...debt, type: 'Credit Card'});
+                    });
+                    
+                    // Add personal loans
+                    debtProfile.personalLoans.forEach(debt => {
+                      allDebts.push({...debt, type: 'Personal Loan'});
+                    });
+                    
+                    // Add other debts
+                    debtProfile.otherDebts.forEach(debt => {
+                      allDebts.push({...debt, type: 'Other'});
+                    });
+                    
+                    // Sort by balance descending
+                    return allDebts
+                      .sort((a, b) => b.currentBalance - a.currentBalance)
+                      .map(debt => (
+                        <TableRow key={debt.id}>
+                          <TableCell>{debt.type}</TableCell>
+                          <TableCell>{debt.lender}</TableCell>
+                          <TableCell>{formatCurrency(debt.currentBalance)}</TableCell>
+                          <TableCell>{formatCurrency(debt.monthlyPayment)}</TableCell>
+                          <TableCell>{Number(debt.interestRate).toFixed(2)}%</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={formatStatus(debt.status)} 
+                              color={getStatusColor(debt.status)} 
+                              size="small"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ));
+                  })()}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-          <Button variant="contained" color="primary" onClick={onEdit}>
-            Edit Debt Profile
-          </Button>
-        </Box>
+       
       </Box>
     </div>
   );

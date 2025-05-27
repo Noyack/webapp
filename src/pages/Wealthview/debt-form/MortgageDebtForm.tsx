@@ -52,6 +52,7 @@ const defaultMortgage: Mortgage = {
   hasCosigner: false,
   cosignerName: '',
   notes: '',
+  // Mortgage specific fields that will be stored in the extra JSON field
   propertyValue: 0,
   mortgageType: 'conventional',
   propertyAddress: '',
@@ -71,9 +72,12 @@ const mortgageTypeOptions = [
 
 const debtStatusOptions = [
   { value: 'current', label: 'Current' },
-  { value: 'pastDue', label: 'Past Due' },
-  { value: 'inCollections', label: 'In Collections' },
-  { value: 'inDefault', label: 'In Default' }
+  { value: 'past_due', label: 'Past Due' },
+  { value: 'in_grace_period', label: 'In Grace' },
+  { value: 'delinquent', label: 'Delinquent' },
+  { value: 'in_collection', label: 'In Collection' },
+  { value: 'default', label: 'In Default' },
+  { value: 'paid_off', label: 'Paid Off' }
 ];
 
 function MortgageDebtForm({ mortgages, onAdd, onUpdate, onRemove }: MortgageDebtFormProps) {
@@ -83,6 +87,20 @@ function MortgageDebtForm({ mortgages, onAdd, onUpdate, onRemove }: MortgageDebt
     ...defaultMortgage,
     id: generateId()
   });
+
+  // Helper function to safely format numeric values
+  const formatRate = (rate: number): string => {
+    const numRate = Number(rate) || 0;
+    return numRate.toFixed(2);
+  };
+
+  // Helper function to calculate remaining term display
+  const formatRemainingTerm = (months: number): string => {
+    const numMonths = Number(months) || 0;
+    const years = Math.floor(numMonths / 12);
+    const remainingMonths = numMonths % 12;
+    return `${years} years, ${remainingMonths} months`;
+  };
 
   // Handle text field changes
   const handleTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,6 +142,11 @@ function MortgageDebtForm({ mortgages, onAdd, onUpdate, onRemove }: MortgageDebt
   const calculateLTV = (mortgage: Mortgage): number => {
     if (!mortgage.propertyValue) return 0;
     return (mortgage.currentBalance / mortgage.propertyValue) * 100;
+  };
+
+  // Format LTV as a string with one decimal place
+  const formatLTV = (ltv: number): string => {
+    return ltv.toFixed(1);
   };
 
   // Reset form
@@ -177,9 +200,9 @@ function MortgageDebtForm({ mortgages, onAdd, onUpdate, onRemove }: MortgageDebt
                   <TableCell>{mortgage.propertyAddress}</TableCell>
                   <TableCell>{formatCurrency(mortgage.currentBalance)}</TableCell>
                   <TableCell>{formatCurrency(mortgage.monthlyPayment)}</TableCell>
-                  <TableCell>{mortgage.interestRate.toFixed(2)}%</TableCell>
-                  <TableCell>{Math.floor(mortgage.remainingTerm / 12)} years, {mortgage.remainingTerm % 12} months</TableCell>
-                  <TableCell>{calculateLTV(mortgage).toFixed(1)}%</TableCell>
+                  <TableCell>{formatRate(Number(mortgage.interestRate))}%</TableCell>
+                  <TableCell>{formatRemainingTerm(mortgage.remainingTerm)}</TableCell>
+                  <TableCell>{formatLTV(calculateLTV(mortgage))}%</TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => handleEdit(mortgage)}>
                       <EditIcon />

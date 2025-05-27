@@ -1,5 +1,5 @@
 import { Typography } from "@mui/material"
-import { Link } from "react-router"
+import { Link } from "react-router-dom"
 
 function ComingSoon() {
   return (

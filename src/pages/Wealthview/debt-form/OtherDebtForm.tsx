@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Typography, 
@@ -60,9 +59,12 @@ const defaultOtherDebt: OtherDebt = {
 
 const debtStatusOptions = [
   { value: 'current', label: 'Current' },
-  { value: 'pastDue', label: 'Past Due' },
-  { value: 'inCollections', label: 'In Collections' },
-  { value: 'inDefault', label: 'In Default' }
+  { value: 'past_due', label: 'Past Due' },
+  { value: 'in_grace_period', label: 'In Grace' },
+  { value: 'delinquent', label: 'Delinquent' },
+  { value: 'in_collection', label: 'In Collection' },
+  { value: 'default', label: 'In Default' },
+  { value: 'paid_off', label: 'Paid Off' }
 ];
 
 const debtTypeOptions = [
@@ -81,6 +83,29 @@ function OtherDebtForm({ otherDebts, onAdd, onUpdate, onRemove }: OtherDebtFormP
     ...defaultOtherDebt,
     id: generateId()
   });
+
+  // Helper function to safely format numeric values
+  const formatRate = (rate: number): string => {
+    const numRate = rate || 0;
+    return numRate.toFixed(2);
+  };
+
+  // Get custom label based on debt type
+  const getLenderLabel = (debtType: string): string => {
+    switch (debtType) {
+      case 'family': return 'Lender (Person/Family Member)';
+      case 'medical': return 'Medical Provider/Collection Agency';
+      case 'tax': return 'Tax Authority (IRS, State, etc.)';
+      case 'business': return 'Business Lender/Bank';
+      case 'homeEquity': return 'HELOC/Home Equity Lender';
+      default: return 'Lender/Creditor';
+    }
+  };
+
+  // Helper to safely get option label
+  const getOptionLabel = (options: Array<{value: string, label: string}>, value: string): string => {
+    return options.find(option => option.value === value)?.label || value;
+  };
 
   // Handle text field changes
   const handleTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,18 +141,6 @@ function OtherDebtForm({ otherDebts, onAdd, onUpdate, onRemove }: OtherDebtFormP
       ...currentOtherDebt,
       [name]: checked
     });
-  };
-
-  // Get custom label based on debt type
-  const getLenderLabel = (debtType: string): string => {
-    switch (debtType) {
-      case 'family': return 'Lender (Person/Family Member)';
-      case 'medical': return 'Medical Provider/Collection Agency';
-      case 'tax': return 'Tax Authority (IRS, State, etc.)';
-      case 'business': return 'Business Lender/Bank';
-      case 'homeEquity': return 'HELOC/Home Equity Lender';
-      default: return 'Lender/Creditor';
-    }
   };
 
   // Reset form
@@ -179,7 +192,7 @@ function OtherDebtForm({ otherDebts, onAdd, onUpdate, onRemove }: OtherDebtFormP
                 <TableRow key={debt.id}>
                   <TableCell>
                     <Chip 
-                      label={debtTypeOptions.find(option => option.value === debt.debtType)?.label || debt.debtType} 
+                      label={getOptionLabel(debtTypeOptions, debt.debtType)} 
                       color="primary" 
                       size="small"
                     />
@@ -192,13 +205,13 @@ function OtherDebtForm({ otherDebts, onAdd, onUpdate, onRemove }: OtherDebtFormP
                   <TableCell>{debt.lender}</TableCell>
                   <TableCell>{formatCurrency(debt.currentBalance)}</TableCell>
                   <TableCell>{formatCurrency(debt.monthlyPayment)}</TableCell>
-                  <TableCell>{debt.interestRate > 0 ? `${debt.interestRate.toFixed(2)}%` : 'N/A'}</TableCell>
+                  <TableCell>{Number(debt.interestRate) > 0 ? `${formatRate(Number(debt.interestRate))}%` : 'N/A'}</TableCell>
                   <TableCell>
                     <Chip 
                       label={debt.status.charAt(0).toUpperCase() + debt.status.slice(1).replace(/([A-Z])/g, ' $1')} 
                       color={
                         debt.status === 'current' ? 'success' : 
-                        debt.status === 'pastDue' ? 'warning' : 'error'
+                        debt.status === 'past_due' ? 'warning' : 'error'
                       }
                       size="small"
                     />

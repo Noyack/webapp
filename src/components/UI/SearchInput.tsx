@@ -148,7 +148,7 @@ export const DashboardSearch = () => {
                 position: "relative"
               }}
             >
-              <iframe 
+              {/* <iframe 
                 ref={iframeRef}
                 src="https://noyack-copilot.kindrock-2260a423.eastus.azurecontainerapps.io/" 
                 width="100%" 
@@ -161,7 +161,7 @@ export const DashboardSearch = () => {
                 loading="lazy"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-              ></iframe>
+              ></iframe> */}
               
               {/* Loading overlay - optional */}
               <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 transition-opacity duration-300" style={{ display: "none" }}>

@@ -10,6 +10,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Skeleton
 } from "@mui/material";
 import { ExpenseInfoForm } from '../../../types';
 import { 
@@ -25,16 +26,47 @@ import {
 interface ExpenseSummaryViewProps {
   expenses: ExpenseInfoForm;
   onEdit: () => void;
+  isLoading?: boolean;
 }
 
-function ExpenseSummaryView({ expenses, onEdit }: ExpenseSummaryViewProps) {
+function ExpenseSummaryView({ expenses, onEdit, isLoading = false }: ExpenseSummaryViewProps) {
   const totalMonthly = calculateTotalMonthly(expenses);
   const priorityData = countByPriority(expenses);
   const taxDeductibleData = calculateTaxDeductible(expenses);
   const categoryTotals = calculateCategoryTotals(expenses);
+  
+  const allExpenses = getAllExpenses(expenses);
+  const hasExpenses = allExpenses.length > 0;
+
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (!hasExpenses) {
+    return (
+      <Box>
+        <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+          <Typography variant="h5" gutterBottom>Expense Summary</Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ my: 4, textAlign: 'center' }}>
+            No expense information found. Click below to start adding your expenses.
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <Button variant="contained" color="primary" onClick={onEdit}>
+              Add Expense Information
+            </Button>
+          </Box>
+        </Paper>
+      </Box>
+    );
+  }
 
   return (
     <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button variant="outlined" color="primary" onClick={onEdit}>
+          Edit Expense Information
+        </Button>
+      </Box>
       <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
         <Typography variant="h5" gutterBottom>Expense Summary</Typography>
         <Box sx={{ mb: 3 }}>
@@ -129,14 +161,43 @@ function ExpenseSummaryView({ expenses, onEdit }: ExpenseSummaryViewProps) {
           </Table>
         </TableContainer>
       </Paper>
-
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-        <Button variant="outlined" color="primary" onClick={onEdit}>
-          Edit Expense Information
-        </Button>
-      </Box>
     </Box>
   );
 }
+
+// Loading skeleton for better UX during data fetch
+const LoadingSkeleton = () => (
+  <Box>
+    <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+      <Skeleton variant="text" width="60%" height={40} sx={{ mb: 2 }} />
+      <Skeleton variant="text" width="80%" height={30} sx={{ mb: 3 }} />
+      
+      <Skeleton variant="text" width="40%" height={30} sx={{ mb: 2 }} />
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {[1, 2, 3, 4, 5, 6].map((item) => (
+          <Grid item xs={12} md={6} lg={4} key={item}>
+            <Skeleton variant="rectangular" height={80} />
+          </Grid>
+        ))}
+      </Grid>
+      
+      <Skeleton variant="text" width="40%" height={30} sx={{ mb: 2 }} />
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {[1, 2, 3, 4].map((item) => (
+          <Grid item xs={12} md={6} lg={3} key={item}>
+            <Skeleton variant="rectangular" height={80} />
+          </Grid>
+        ))}
+      </Grid>
+      
+      <Skeleton variant="text" width="40%" height={30} sx={{ mb: 2 }} />
+      <Skeleton variant="rectangular" height={150} />
+    </Paper>
+    
+    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+      <Skeleton variant="rectangular" width={150} height={40} />
+    </Box>
+  </Box>
+);
 
 export default ExpenseSummaryView;

@@ -1,6 +1,6 @@
 import { Typography } from "@mui/material"
 import { useEffect } from "react";
-import { useNavigate } from "react-router"
+import { useNavigate } from "react-router-dom"
 
 function NotFound() {
     const navigate = useNavigate()
@@ -10,6 +10,7 @@ function NotFound() {
         }, 2000);
     
         return () => clearTimeout(timing); // Proper cleanup function
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
         return (
     <div className=" flex flex-col items-center h-full w-full">

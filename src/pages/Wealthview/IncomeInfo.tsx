@@ -60,7 +60,7 @@ function IncomeInfo() {
   const [originalFormData, setOriginalFormData] = useState<IncomeInfoForm | null>(null);
 
   // Edit mode state
-  const [isEditing, setIsEditing] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
   
   // Additional income form visibility
   const [showAddIncomeForm, setShowAddIncomeForm] = useState(false);
@@ -487,8 +487,8 @@ function IncomeInfo() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>Income Information</Typography>
+    <Box sx={{ p: {xs: 0, md:3} }}>
+      <Typography variant="h4" fontSize={{xs:"24px", md:"34px"}} gutterBottom>Income Information</Typography>
       
       {isEditing ? (
         <form onSubmit={handleSubmit}>

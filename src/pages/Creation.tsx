@@ -96,9 +96,12 @@ const STATES_BY_COUNTRY: Record<string, Array<{code: string, name: string}>> = {
   // Add other countries as needed
 };
 
-function Creation() {
+function Creation({isMobile}:{isMobile:boolean}) {
 
   const {userInfo} = useContext(UserContext)
+
+  const desktopView= "grid grid-cols-[2fr_1fr] max-h-screen overflow-auto bg-[#F8F8F8]"
+  const mobileView= "max-h-screen overflow-auto bg-[#F8F8F8]"
   
   // Form data states with proper typing
   const [userData, setUserData] = useState<UserCreationData>({
@@ -465,7 +468,7 @@ function Creation() {
   // If onboarding is completed, show success screen
   if (completed) {
     return (
-      <div className="min-h-screen grid grid-cols-[2fr_1fr] bg-[#F8F8F8]">
+      <div className={isMobile?`${mobileView}`:`${desktopView}`}>
         <div className='flex justify-center items-center'>
           <div className='flex flex-col items-center gap-8 max-w-md text-center'>
             <div className='w-24 h-24 bg-[#2E7D32] rounded-full flex items-center justify-center'>
@@ -490,17 +493,17 @@ function Creation() {
             </Button>
           </div>
         </div>
-        <div className="creation-form-aside h-screen sticky top-0 flex justify-center items-center p-8">
+        {isMobile && <div className="creation-form-aside h-screen sticky top-0 flex justify-center items-center p-8">
           <div className="flex gap-[35px]">
             <img src={Logo} alt="Noyack Logo" className="w-50 creation-aside"/>
           </div>
-        </div>
+        </div>}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-[2fr_1fr] max-h-screen overflow-auto bg-[#F8F8F8]"> 
+    <div className={isMobile?`${mobileView}`:`${desktopView}`}> 
       {/* Main Content - Flexible middle column */}
       <div className='flex justify-center overflow-auto p-5'>
         <main className=" py-6 px-5 flex flex-col gap-[30px] justify-center max-w-xl pb-6">
@@ -556,11 +559,11 @@ function Creation() {
       </div>
 
       {/* Aside - Fixed width */}
-      <div className="creation-form-aside h-screen sticky top-0 flex justify-center items-center p-8">
+     {!isMobile && <div className="creation-form-aside h-screen sticky top-0 flex justify-center items-center p-8">
         <div className="flex gap-[35px]">
           <img src={Logo} alt="Noyack Logo" className="w-50 creation-aside"/>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

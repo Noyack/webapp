@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { 
   Typography, 
   Button,
@@ -21,6 +21,7 @@ import {
   Snackbar
 } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AddIcon from '@mui/icons-material/Add';
 
 // Asset Form Components
 import LiquidAssetForm from './asset-forms/LiquidAssetForm.tsx';
@@ -85,7 +86,19 @@ function TabPanel(props: TabPanelProps) {
 function AssetsAllocations() {
   // Generate unique ID
   const generateId = () => `asset_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-const {userInfo} = useContext(UserContext)
+
+  // Get user info from context
+  const { userInfo } = useContext(UserContext);
+  
+  // Prevent duplicate API calls by tracking if data has been loaded
+  const hasLoadedDataRef = useRef(false);
+  const userIdRef = useRef<string | null>(null);
+
+  // Set userId only once when component mounts
+  if (!userIdRef.current && userInfo?.id) {
+    userIdRef.current = userInfo.id;
+  }
+
   // Initial form state
   const [formData, setFormData] = useState<AssetsFormData>({
     liquidAssets: [],
@@ -113,6 +126,14 @@ const {userInfo} = useContext(UserContext)
     liquidityNeeds: 10
   });
 
+  // Form visibility states
+  const [showAddLiquidAsset, setShowAddLiquidAsset] = useState(false);
+  const [showAddInvestmentAsset, setShowAddInvestmentAsset] = useState(false);
+  const [showAddRetirementAsset, setShowAddRetirementAsset] = useState(false);
+  const [showAddRealEstateAsset, setShowAddRealEstateAsset] = useState(false);
+  const [showAddBusinessAsset, setShowAddBusinessAsset] = useState(false);
+  const [showAddPersonalPropertyAsset, setShowAddPersonalPropertyAsset] = useState(false);
+
   // Tab state
   const [tabValue, setTabValue] = useState(0);
 
@@ -128,29 +149,116 @@ const {userInfo} = useContext(UserContext)
   // Success notification state
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Load user assets on component mount
+  // Load user assets on component mount - only once to prevent duplicate calls
   useEffect(() => {
     const loadUserAssets = async () => {
-      if (userInfo?.id){
+      // Only load if we have a userId and haven't loaded yet
+      if (!userIdRef.current || hasLoadedDataRef.current) {
+        setIsLoading(false);
+        return;
+      }
 
         try {
           setIsLoading(true);
           setError(null);
-          const assets = await assetsService.getUserAssets(userInfo?.id);
+        const assets = await assetsService.getUserAssets(userIdRef.current);
           setFormData(assets);
+        hasLoadedDataRef.current = true; // Mark as loaded
         } catch (err) {
           console.error('Error loading assets:', err);
           setError('Failed to load your assets. Please try again later.');
         } finally {
           setIsLoading(false);
-        }
       }
     };
 
-    if (userInfo?.id) {
       loadUserAssets();
+  }, []); // No dependencies - load once and never again
+
+  // Calculate current allocation based on asset values
+  useEffect(() => {
+    calculateCurrentAllocation();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    formData.liquidAssets, 
+    formData.investmentAssets, 
+    formData.retirementAssets, 
+    formData.realEstateAssets, 
+    formData.businessAssets, 
+    formData.personalPropertyAssets
+  ]);
+
+  // Calculate current allocation based on asset categories
+  const calculateCurrentAllocation = () => {
+    const totalValue = calculateTotalAssetsValue();
+    
+    if (totalValue <= 0) return;
+
+    // Initialize allocation values
+    let stocks = 0;
+    let bonds = 0; 
+    let cash = 0;
+    let realEstate = 0;
+    let alternatives = 0;
+    let other = 0;
+
+    // Calculate allocation for each asset type
+    
+    // Liquid assets mostly go to cash
+    const liquidSum = formData.liquidAssets.reduce((sum, asset) => sum + asset.currentValue, 0);
+    cash = (liquidSum / totalValue) * 100;
+
+    // Investment assets split between stocks, bonds, and alternatives
+    formData.investmentAssets.forEach(asset => {
+      const assetPercentage = (asset.currentValue / totalValue) * 100;
+      if (asset.type === 'stock' || asset.type === 'etf' || asset.type === 'mutualFund') {
+        stocks += assetPercentage;
+      } else if (asset.type === 'bond' || asset.type === 'fixedIncome') {
+        bonds += assetPercentage;
+      } else if (asset.type === 'crypto' || asset.type === 'reit' || asset.type === 'commodities') {
+        alternatives += assetPercentage;
+      } else {
+        other += assetPercentage;
+      }
+    });
+
+    // Retirement assets are typically in mixed allocations
+    const retirementSum = formData.retirementAssets.reduce((sum, asset) => sum + asset.currentValue, 0);
+    // Simplified assumption: retirement assets are typically 60% stocks, 30% bonds, 10% alternatives
+    stocks += (retirementSum / totalValue) * 60; 
+    bonds += (retirementSum / totalValue) * 30;
+    alternatives += (retirementSum / totalValue) * 10;
+
+    // Real estate assets
+    const realEstateSum = formData.realEstateAssets.reduce((sum, asset) => sum + asset.currentValue, 0);
+    realEstate = (realEstateSum / totalValue) * 100;
+
+    // Business assets go to alternatives
+    const businessSum = formData.businessAssets.reduce((sum, asset) => sum + asset.currentValue, 0);
+    alternatives += (businessSum / totalValue) * 100;
+
+    // Personal property to other
+    const personalPropertySum = formData.personalPropertyAssets.reduce((sum, asset) => sum + asset.currentValue, 0);
+    other += (personalPropertySum / totalValue) * 100;
+
+    // Round to one decimal place
+    const currentAllocation = {
+      stocks: Math.round(stocks * 10) / 10,
+      bonds: Math.round(bonds * 10) / 10,
+      cash: Math.round(cash * 10) / 10,
+      realEstate: Math.round(realEstate * 10) / 10,
+      alternatives: Math.round(alternatives * 10) / 10,
+      other: Math.round(other * 10) / 10
+    };
+
+    // Only update current allocation, not the target allocation
+    if (isEditing) {
+      setFormData(prevData => ({
+        ...prevData,
+        currentAllocation
+      }));
     }
-  }, [userInfo]);
+  };
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -173,6 +281,7 @@ const {userInfo} = useContext(UserContext)
       ...formData,
       liquidAssets: [...formData.liquidAssets, asset]
     });
+    setShowAddLiquidAsset(false); // Hide the form after adding
   };
 
   const addInvestmentAsset = (asset: InvestmentAsset) => {
@@ -180,6 +289,7 @@ const {userInfo} = useContext(UserContext)
       ...formData,
       investmentAssets: [...formData.investmentAssets, asset]
     });
+    setShowAddInvestmentAsset(false); // Hide the form after adding
   };
 
   const addRetirementAsset = (asset: RetirementAsset) => {
@@ -187,6 +297,7 @@ const {userInfo} = useContext(UserContext)
       ...formData,
       retirementAssets: [...formData.retirementAssets, asset]
     });
+    setShowAddRetirementAsset(false); // Hide the form after adding
   };
 
   const addRealEstateAsset = (asset: RealEstateAsset) => {
@@ -194,6 +305,7 @@ const {userInfo} = useContext(UserContext)
       ...formData,
       realEstateAssets: [...formData.realEstateAssets, asset]
     });
+    setShowAddRealEstateAsset(false); // Hide the form after adding
   };
 
   const addBusinessAsset = (asset: BusinessAsset) => {
@@ -201,6 +313,7 @@ const {userInfo} = useContext(UserContext)
       ...formData,
       businessAssets: [...formData.businessAssets, asset]
     });
+    setShowAddBusinessAsset(false); // Hide the form after adding
   };
 
   const addPersonalPropertyAsset = (asset: PersonalPropertyAsset) => {
@@ -208,6 +321,7 @@ const {userInfo} = useContext(UserContext)
       ...formData,
       personalPropertyAssets: [...formData.personalPropertyAssets, asset]
     });
+    setShowAddPersonalPropertyAsset(false); // Hide the form after adding
   };
 
   // Remove asset handlers
@@ -255,25 +369,29 @@ const {userInfo} = useContext(UserContext)
 
   // Update allocations
   const updateAllocations = (type: 'current' | 'target', allocation: AssetAllocation) => {
+    console.log(`Updating ${type} allocation:`, allocation);
+    
+    // Update the specific allocation type without modifying other form data
     if (type === 'current') {
-      setFormData({
-        ...formData,
+      setFormData(prevData => ({
+        ...prevData,
         currentAllocation: allocation
-      });
+      }));
     } else {
-      setFormData({
-        ...formData,
+      setFormData(prevData => ({
+        ...prevData,
         targetAllocation: allocation
-      });
+      }));
     }
   };
 
   // Update liquidity needs
   const updateLiquidityNeeds = (value: number) => {
-    setFormData({
-      ...formData,
+    console.log("Updating liquidity needs:", value);
+    setFormData(prevData => ({
+      ...prevData,
       liquidityNeeds: value
-    });
+    }));
   };
 
   // Calculate total assets value
@@ -300,12 +418,20 @@ const {userInfo} = useContext(UserContext)
   // Submit form and switch to display mode
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if(userInfo?.id)
+    if(!userInfo?.id) return;
+    
     try {
       setIsLoading(true);
       setError(null);
       
-      await assetsService.saveAssetsAndAllocations(userInfo?.id, formData);
+      // Log what's being saved to help debug
+      console.log("Saving form data:", {
+        currentAllocation: formData.currentAllocation,
+        targetAllocation: formData.targetAllocation,
+        liquidityNeeds: formData.liquidityNeeds
+      });
+      
+      await assetsService.saveAssetsAndAllocations(userInfo.id, formData);
       
       setIsEditing(false);
       setShowSuccess(true);
@@ -327,6 +453,31 @@ const {userInfo} = useContext(UserContext)
     setError(null);
   };
 
+  // Toggle form visibility handlers
+  const toggleAddLiquidAsset = () => {
+    setShowAddLiquidAsset(!showAddLiquidAsset);
+  };
+
+  const toggleAddInvestmentAsset = () => {
+    setShowAddInvestmentAsset(!showAddInvestmentAsset);
+  };
+
+  const toggleAddRetirementAsset = () => {
+    setShowAddRetirementAsset(!showAddRetirementAsset);
+  };
+
+  const toggleAddRealEstateAsset = () => {
+    setShowAddRealEstateAsset(!showAddRealEstateAsset);
+  };
+
+  const toggleAddBusinessAsset = () => {
+    setShowAddBusinessAsset(!showAddBusinessAsset);
+  };
+
+  const toggleAddPersonalPropertyAsset = () => {
+    setShowAddPersonalPropertyAsset(!showAddPersonalPropertyAsset);
+  };
+
   // If loading, show loading indicator
   if (isLoading && !isEditing) {
     return (
@@ -337,8 +488,8 @@ const {userInfo} = useContext(UserContext)
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>Assets and Allocations</Typography>
+    <Box sx={{ p: {xs:0, md:3} }}>
+      <Typography variant="h4" fontSize={{xs:"24px", md:"34px"}} gutterBottom>Assets and Allocations</Typography>
       
       {/* Error notification */}
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleErrorClose}>
@@ -411,10 +562,21 @@ const {userInfo} = useContext(UserContext)
               </TableContainer>
             )}
             
-            <LiquidAssetForm 
-              onAdd={addLiquidAsset} 
-              generateId={generateId} 
-            />
+            {!showAddLiquidAsset ? (
+              <Button 
+                variant="outlined" 
+                color="primary" 
+                startIcon={<AddIcon />} 
+                onClick={toggleAddLiquidAsset}
+              >
+                Add Liquid Asset
+              </Button>
+            ) : (
+              <LiquidAssetForm 
+                onAdd={addLiquidAsset} 
+                generateId={generateId} 
+              />
+            )}
           </TabPanel>
 
           {/* Investment Assets Tab */}
@@ -460,10 +622,21 @@ const {userInfo} = useContext(UserContext)
               </TableContainer>
             )}
             
-            <InvestmentAssetForm 
-              onAdd={addInvestmentAsset} 
-              generateId={generateId} 
-            />
+            {!showAddInvestmentAsset ? (
+              <Button 
+                variant="outlined" 
+                color="primary" 
+                startIcon={<AddIcon />} 
+                onClick={toggleAddInvestmentAsset}
+              >
+                Add Investment Asset
+              </Button>
+            ) : (
+              <InvestmentAssetForm 
+                onAdd={addInvestmentAsset} 
+                generateId={generateId} 
+              />
+            )}
           </TabPanel>
 
           {/* Retirement Assets Tab */}
@@ -509,10 +682,21 @@ const {userInfo} = useContext(UserContext)
               </TableContainer>
             )}
             
-            <RetirementAssetForm 
-              onAdd={addRetirementAsset} 
-              generateId={generateId} 
-            />
+            {!showAddRetirementAsset ? (
+              <Button 
+                variant="outlined" 
+                color="primary" 
+                startIcon={<AddIcon />} 
+                onClick={toggleAddRetirementAsset}
+              >
+                Add Retirement Asset
+              </Button>
+            ) : (
+              <RetirementAssetForm 
+                onAdd={addRetirementAsset} 
+                generateId={generateId} 
+              />
+            )}
           </TabPanel>
 
           {/* Real Estate Assets Tab */}
@@ -558,10 +742,21 @@ const {userInfo} = useContext(UserContext)
               </TableContainer>
             )}
             
-            <RealEstateAssetForm 
-              onAdd={addRealEstateAsset} 
-              generateId={generateId} 
-            />
+            {!showAddRealEstateAsset ? (
+              <Button 
+                variant="outlined" 
+                color="primary" 
+                startIcon={<AddIcon />} 
+                onClick={toggleAddRealEstateAsset}
+              >
+                Add Real Estate Asset
+              </Button>
+            ) : (
+              <RealEstateAssetForm 
+                onAdd={addRealEstateAsset} 
+                generateId={generateId} 
+              />
+            )}
           </TabPanel>
 
           {/* Business Assets Tab */}
@@ -607,10 +802,21 @@ const {userInfo} = useContext(UserContext)
               </TableContainer>
             )}
             
-            <BusinessAssetForm 
-              onAdd={addBusinessAsset} 
-              generateId={generateId} 
-            />
+            {!showAddBusinessAsset ? (
+              <Button 
+                variant="outlined" 
+                color="primary" 
+                startIcon={<AddIcon />} 
+                onClick={toggleAddBusinessAsset}
+              >
+                Add Business Asset
+              </Button>
+            ) : (
+              <BusinessAssetForm 
+                onAdd={addBusinessAsset} 
+                generateId={generateId} 
+              />
+            )}
           </TabPanel>
 
           {/* Personal Property Assets Tab */}
@@ -656,10 +862,21 @@ const {userInfo} = useContext(UserContext)
               </TableContainer>
             )}
             
-            <PersonalPropertyAssetForm 
-              onAdd={addPersonalPropertyAsset} 
-              generateId={generateId} 
-            />
+            {!showAddPersonalPropertyAsset ? (
+              <Button 
+                variant="outlined" 
+                color="primary" 
+                startIcon={<AddIcon />} 
+                onClick={toggleAddPersonalPropertyAsset}
+              >
+                Add Personal Property
+              </Button>
+            ) : (
+              <PersonalPropertyAssetForm 
+                onAdd={addPersonalPropertyAsset} 
+                generateId={generateId} 
+              />
+            )}
           </TabPanel>
 
           {/* Asset Allocations Tab */}
@@ -671,6 +888,7 @@ const {userInfo} = useContext(UserContext)
               updateCurrentAllocation={(allocation) => updateAllocations('current', allocation)}
               updateTargetAllocation={(allocation) => updateAllocations('target', allocation)}
               updateLiquidityNeeds={updateLiquidityNeeds}
+              isReadOnly={true} // Make current allocation read-only since it's calculated
             />
           </TabPanel>
 
@@ -688,6 +906,16 @@ const {userInfo} = useContext(UserContext)
         </form>
       ) : (
         <div>
+           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              onClick={() => setIsEditing(true)}
+              disabled={isLoading}
+            >
+              Edit Assets & Allocations
+            </Button>
+          </Box>
           <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
             <Typography variant="h5" gutterBottom>Assets Summary</Typography>
             <Box sx={{ mb: 3 }}>
@@ -1045,16 +1273,7 @@ const {userInfo} = useContext(UserContext)
             </Grid>
           </Paper>
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-            <Button 
-              variant="outlined" 
-              color="primary" 
-              onClick={() => setIsEditing(true)}
-              disabled={isLoading}
-            >
-              Edit Assets & Allocations
-            </Button>
-          </Box>
+         
         </div>
       )}
     </Box>

@@ -11,7 +11,7 @@ import {
   // RecurringInvestment
 } from '../../types'
 import { investmentService } from '../../services'
-import { Link } from 'react-router'
+import { Link } from 'react-router-dom'
 
 function Overview() {
     const { user } = useUser();

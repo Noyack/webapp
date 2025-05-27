@@ -1,5 +1,6 @@
 import apiClient from './api-client';
 import { ContactDetails, User } from '../types';
+import { tokenManager } from '../utils/tokenManager';
 
 /**
  * Service for authentication and user profile operations
@@ -8,8 +9,8 @@ export class AuthService {
   /**
    * Set the authentication token
    */
-  setAuthToken(token: string): void {
-    apiClient.setAuthToken(token);
+  setAuthToken(token: string, expiryInSeconds?: number): void {
+    apiClient.setAuthToken(token, expiryInSeconds);
   }
 
   /**
@@ -17,6 +18,20 @@ export class AuthService {
    */
   clearAuthToken(): void {
     apiClient.clearAuthToken();
+  }
+
+  /**
+   * Check if we have a valid token
+   */
+  hasValidToken(): boolean {
+    return tokenManager.hasValidToken();
+  }
+
+  /**
+   * Get current token from storage
+   */
+  getCurrentToken(): string | null {
+    return tokenManager.getToken();
   }
 
   /**

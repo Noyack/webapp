@@ -1,6 +1,7 @@
 /* eslint-disable no-useless-catch */
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ApiResponse, ErrorResponse } from '../types';
+import { tokenManager } from '../utils/tokenManager';
 
 // Base API URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -22,8 +23,11 @@ export class ApiClient {
     // Request interceptor for adding auth token
     this.api.interceptors.request.use(
       (config) => {
-        // Get token from storage or session if needed
-        // This would be replaced by Clerk's getToken in higher level service
+        // Get token from tokenManager
+        const token = tokenManager.getToken();
+        if (token) {
+          config.headers.authorization = `Bearer ${token}`;
+        }
         return config;
       },
       (error) => Promise.reject(error)
@@ -48,15 +52,15 @@ export class ApiClient {
   /**
    * Set the authentication token for all subsequent requests
    */
-  setAuthToken(token: string): void {
-    this.api.defaults.headers.common['authorization'] = `Bearer ${token}`;
+  setAuthToken(token: string, expiryInSeconds?: number): void {
+    tokenManager.setToken(token, expiryInSeconds);
   }
 
   /**
    * Clear the authentication token
    */
   clearAuthToken(): void {
-    delete this.api.defaults.headers.common['Authorization'];
+    tokenManager.clearToken();
   }
 
   /**

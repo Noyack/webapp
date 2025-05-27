@@ -54,6 +54,8 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import ExportButtons from '../../components/ExportButtons';
+import { GenericExportData } from '../../utils/exportUtils';
 // Types
 interface Debt {
   id: string;
@@ -111,6 +113,7 @@ const DebtPayoffPlanner = () => {
       remainingBalance: number;
     }[];
   }>>([]);
+
 
   // Default new debt
   const defaultNewDebt: Debt = {
@@ -456,6 +459,157 @@ const DebtPayoffPlanner = () => {
     
     return monthlyDetails;
   };
+
+  // Prepare export data
+  const prepareExportData = (): GenericExportData => {
+    if (!payoffResults) {
+      return {
+        calculatorName: 'Debt Payoff Planner',
+        inputs: {},
+        keyMetrics: [],
+        recommendations: []
+      };
+    }
+
+    const totalDebt = debts.reduce((sum, debt) => sum + debt.balance, 0);
+    const totalMinPayments = debts.reduce((sum, debt) => sum + debt.minimumPayment, 0);
+    const avgInterestRate = debts.reduce((sum, debt) => sum + debt.interestRate * debt.balance, 0) / totalDebt;
+    const monthsToPayoff = payoffResults.summary.months;
+    const totalInterestSaved = debts.reduce((sum, debt) => {
+      // Calculate interest if paying minimums only
+      const minimumOnlyInterest = debt.balance * (debt.interestRate / 100) * (debt.balance / debt.minimumPayment / 12);
+      return sum + minimumOnlyInterest;
+    }, 0) - payoffResults.summary.totalInterestPaid;
+
+    // Prepare detailed payment schedule data
+    const detailedPaymentSchedule = payoffResults.scheduleSummary.map((month, index) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() + index);
+      return {
+        month: month.month,
+        date: date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
+        totalPayment: month.payment,
+        principalPayment: month.principal,
+        interestPayment: month.interest,
+        remainingBalance: month.remainingBalance,
+        totalPaid: month.totalPaid,
+        totalInterestPaid: month.totalInterestPaid
+      };
+    });
+
+    // Prepare debt-specific payment schedules
+    const debtSpecificSchedules = payoffResults.debtSchedules.map(debt => ({
+      debtName: debt.name,
+      debtType: debt.type,
+      startingBalance: debts.find(d => d.id === debt.id)?.balance || 0,
+      interestRate: debt.interestRate,
+      minimumPayment: debt.minimumPayment,
+      payoffDate: debt.payoffDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+      monthsToPayoff: debt.schedule.length,
+      totalInterestPaid: debt.schedule.reduce((sum, payment) => sum + payment.interest, 0),
+      schedule: debt.schedule.map((payment, index) => {
+        const date = new Date();
+        date.setMonth(date.getMonth() + index);
+        return {
+          month: payment.month,
+          date: date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
+          payment: payment.payment,
+          principal: payment.principal,
+          interest: payment.interest,
+          remainingBalance: payment.remainingBalance,
+          totalPaid: payment.totalPaid,
+          totalInterestPaid: payment.totalInterestPaid
+        };
+      })
+    }));
+
+    // Prepare monthly debt distribution (showing how much goes to each debt each month)
+    const monthlyDebtDistribution = detailedSchedule.map(month => ({
+      month: month.month,
+      date: month.date,
+      totalPayment: month.totalPayment,
+      ...month.debts.reduce((acc, debt) => ({
+        ...acc,
+        [`${debt.name}_payment`]: debt.payment,
+        [`${debt.name}_principal`]: debt.principal,
+        [`${debt.name}_interest`]: debt.interest,
+        [`${debt.name}_balance`]: debt.remainingBalance
+      }), {})
+    }));
+
+    return {
+      calculatorName: 'Debt Payoff Planner',
+      inputs: {
+        payoffMethod: payoffMethod,
+        monthlyBudget: monthlyBudget,
+        numberOfDebts: debts.length,
+        totalDebt: totalDebt,
+        totalMinimumPayments: totalMinPayments,
+        extraPaymentAmount: Math.max(0, monthlyBudget - totalMinPayments),
+        debts: debts.map(debt => ({
+          name: debt.name,
+          type: debt.type,
+          balance: debt.balance,
+          interestRate: debt.interestRate,
+          minimumPayment: debt.minimumPayment
+        }))
+      },
+      keyMetrics: [
+        { label: 'Total Debt', value: `$${totalDebt.toLocaleString()}` },
+        { label: 'Number of Debts', value: debts.length },
+        { label: 'Average Interest Rate', value: `${avgInterestRate.toFixed(2)}%` },
+        { label: 'Monthly Budget', value: `$${monthlyBudget.toLocaleString()}` },
+        { label: 'Total Minimum Payments', value: `$${totalMinPayments.toLocaleString()}` },
+        { label: 'Extra Payment Power', value: `$${Math.max(0, monthlyBudget - totalMinPayments).toLocaleString()}` },
+        { label: 'Payoff Method', value: payoffMethod.charAt(0).toUpperCase() + payoffMethod.slice(1).replace(/([A-Z])/g, ' $1') },
+        { label: 'Time to Debt Freedom', value: `${Math.floor(monthsToPayoff / 12)} years, ${monthsToPayoff % 12} months` },
+        { label: 'Total Interest Paid', value: `$${payoffResults.summary.totalInterestPaid.toLocaleString()}` },
+        { label: 'Total Amount Paid', value: `$${payoffResults.summary.totalPaid.toLocaleString()}` },
+        { label: 'Interest Savings vs Minimum Payments', value: `$${totalInterestSaved.toLocaleString()}` }
+      ],
+      summary: {
+        totalDebt: totalDebt,
+        monthlyBudget: monthlyBudget,
+        payoffMethod: payoffMethod,
+        monthsToPayoff: monthsToPayoff,
+        totalInterestPaid: payoffResults.summary.totalInterestPaid,
+        totalPaid: payoffResults.summary.totalPaid,
+        interestSavings: totalInterestSaved,
+        avgInterestRate: avgInterestRate,
+        debtFreeDate: new Date(new Date().getFullYear(), new Date().getMonth() + monthsToPayoff, 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+      },
+      tableData: monthlyDebtDistribution,
+      recommendations: [
+        monthlyBudget <= totalMinPayments ? 'Your budget only covers minimum payments. Consider increasing your monthly budget or finding additional income to accelerate debt payoff.' : `Excellent! You have $${(monthlyBudget - totalMinPayments).toLocaleString()} extra each month to attack your debt.`,
+        payoffMethod === 'snowball' ? 'The Debt Snowball method focuses on smallest balances first for psychological wins and momentum.' : payoffMethod === 'avalanche' ? 'The Debt Avalanche method saves the most money by targeting highest interest rates first.' : 'Your chosen method balances multiple factors for a strategic approach.',
+        `With your current plan, you'll be debt-free in ${Math.floor(monthsToPayoff / 12)} years and ${monthsToPayoff % 12} months.`,
+        totalInterestSaved > 0 ? `By following this plan instead of paying minimums, you'll save approximately $${totalInterestSaved.toLocaleString()} in interest.` : 'Consider increasing your monthly budget to save more on interest payments.',
+        'Consider using windfalls (tax refunds, bonuses) to make extra payments toward your highest priority debt.',
+        'Avoid taking on new debt while following this payoff plan.',
+        'Build a small emergency fund ($1,000) before aggressively paying off debt to avoid relying on credit cards.',
+        avgInterestRate > 15 ? 'Your average interest rate is high. Consider debt consolidation or balance transfer options.' : 'Your interest rates are manageable with your current strategy.',
+        'Track your progress monthly and celebrate milestones to stay motivated.',
+        'Consider the debt snowflake method: put any extra money (even small amounts) toward debt.'
+      ],
+      // Additional detailed data for comprehensive export
+      additionalData: {
+        detailedPaymentSchedule: detailedPaymentSchedule,
+        debtSpecificSchedules: debtSpecificSchedules,
+        payoffOrder: payoffResults.debtSchedules.map((debt, index) => ({
+          order: index + 1,
+          debtName: debt.name,
+          debtType: debt.type,
+          startingBalance: debts.find(d => d.id === debt.id)?.balance || 0,
+          interestRate: debt.interestRate,
+          minimumPayment: debt.minimumPayment,
+          payoffDate: debt.payoffDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
+          monthsToPayoff: debt.schedule.length,
+          totalInterestPaid: debt.schedule.reduce((sum, payment) => sum + payment.interest, 0)
+        }))
+      }
+    };
+  };
+
   // Calculate payoff when relevant inputs change
   useEffect(() => {
     if (debts.length > 0) {
@@ -1214,6 +1368,17 @@ const DebtPayoffPlanner = () => {
                     View Payment Schedule
                   </Button>
                 </Box>
+
+                {/* Export Section */}
+                <Box sx={{ mt: 4, p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+                  <Typography variant="h6" gutterBottom textAlign="center">
+                    Export Your Debt Payoff Plan
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 2 }}>
+                    Download your debt analysis, payment strategy, and month-by-month schedule
+                  </Typography>
+                  <ExportButtons data={prepareExportData()} />
+                </Box>
               </Paper>
             </Grid>
           </Grid>
@@ -1482,6 +1647,17 @@ const DebtPayoffPlanner = () => {
                   >
                     Back to Results
                   </Button>
+                </Box>
+
+                {/* Export Section */}
+                <Box sx={{ mt: 4, p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+                  <Typography variant="h6" gutterBottom textAlign="center">
+                    Export Your Debt Payoff Plan
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 2 }}>
+                    Download your debt analysis, payment strategy, and detailed payment schedule
+                  </Typography>
+                  <ExportButtons data={prepareExportData()} />
                 </Box>
               </Paper>
             </Grid>

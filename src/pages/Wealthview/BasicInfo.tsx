@@ -20,7 +20,7 @@ import {
   Snackbar
 } from "@mui/material";
 import { InfoProps, PersonalInfoForm } from '../../types';
-import wealthViewService from '../../services/wealthView-service';
+import wealthViewService from '../../services/wealthView.service';
 import { UserContext } from '../../context/UserContext';
 
 const maritalStatusOptions = ["single", "married", "divorced", "widowed", "separated", "domestic_partnership"];
@@ -381,8 +381,8 @@ function BasicInfo() {
   };
 
   return (
-    <Box display={'flex'} flexDirection={'column'} sx={{ p: 3, gap: 2 }}>
-      <Typography variant="h4" gutterBottom>Personal Information</Typography>
+    <Box display={'flex'} flexDirection={'column'} sx={{ p: {xs:0, md:3}, gap: 2 }}>
+      <Typography variant="h4" fontSize={{xs:"24px", md:"34px"}} gutterBottom>Personal Information</Typography>
       
       {/* Notifications */}
       <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseAlert}>
@@ -831,8 +831,12 @@ function BasicInfo() {
         </form>
       ) : (
         <div>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button variant="outlined" color="primary" onClick={()=>handleIsEditing()}>
+              Edit Information
+            </Button>
+          </Box>
           <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-            <Typography variant="h5" gutterBottom>Personal Summary</Typography>
             <div className="flex flex-wrap gap-5 justify-between">
               <Info label="Current Age" value={formData.currentAge} />
               <Info label="Expected Retirement" value={formData.expectedRetirementAge} />
@@ -879,12 +883,6 @@ function BasicInfo() {
               <Info label="Lifestyle Sacrifice" value={`${formData.lifestyleSacrifice}/5`} />
             </div>
           </Paper>
-
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-            <Button variant="outlined" color="primary" onClick={()=>handleIsEditing()}>
-              Edit Information
-            </Button>
-          </Box>
         </div>
       )}
     </Box>
