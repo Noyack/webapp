@@ -1,13 +1,10 @@
 import { Button, Select, MenuItem, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { useState } from "react";
-
-type Prop = {
-  setStep: (step: number) => void;
-};
+import { OnboardStepProps } from "../../types";
 
 const customInput = "border-2 p-3 rounded-lg";
 
-function StepTwo({ setStep }: Prop) {
+function StepTwo({ setStep }: OnboardStepProps) {
   const [choice] = useState<number | null>(1);
   const [stage, setStage] = useState<number>(1);
   const [recurring, setRecurring] = useState(false);

@@ -1,5 +1,6 @@
 import apiClient from './api-client';
 import { ContactDetails, User } from '../types';
+import { tokenManager } from '../utils/tokenManager';
 
 /**
  * Service for authentication and user profile operations
@@ -8,8 +9,8 @@ export class AuthService {
   /**
    * Set the authentication token
    */
-  setAuthToken(token: string): void {
-    apiClient.setAuthToken(token);
+  setAuthToken(token: string, expiryInSeconds?: number): void {
+    apiClient.setAuthToken(token, expiryInSeconds);
   }
 
   /**
@@ -17,6 +18,20 @@ export class AuthService {
    */
   clearAuthToken(): void {
     apiClient.clearAuthToken();
+  }
+
+  /**
+   * Check if we have a valid token
+   */
+  hasValidToken(): boolean {
+    return tokenManager.hasValidToken();
+  }
+
+  /**
+   * Get current token from storage
+   */
+  getCurrentToken(): string | null {
+    return tokenManager.getToken();
   }
 
   /**
@@ -37,7 +52,7 @@ export class AuthService {
    * Get the current user's profile
    */
   async getCurrentUser(): Promise<User> {
-    const response = await apiClient.get<User>('/users/me');
+    const response = await apiClient.get<User>('users/profile');
     return response.data;
   }
 
@@ -57,7 +72,7 @@ export class AuthService {
       const user = await this.getCurrentUser();
       // Logic to determine if user is new and needs onboarding
       // This is an example - adjust based on your backend API
-      return user && !user.hasCompletedOnboarding;
+      return user && user.onboarding;
     } catch  {
       // If user not found, they're probably new
       return true;
@@ -68,7 +83,7 @@ export class AuthService {
    * Complete user onboarding
    */
   async completeOnboarding(userId: string, onboardingData: unknown): Promise<User> {
-    const response = await apiClient.post<User>(`/users/${userId}/onboarding`, onboardingData);
+    const response = await apiClient.patch<User>(`/users/${userId}/onboarding`, onboardingData);
     return response.data;
   }
 }

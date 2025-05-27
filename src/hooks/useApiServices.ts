@@ -1,20 +1,30 @@
-import { useState, useEffect } from 'react';
-import useAuthService from './useAuthService';
+import { useState, useEffect, useMemo } from 'react';
+import {useAuthService} from './useAuthService';
 import { 
   authService, 
   investmentService, 
   communityService,
-  calculatorService
+  calculatorService,
+  // emergencyFundService
 } from '../services';
 
 /**
  * Hook to initialize and manage API services
- * This sets up authentication tokens and handles API service initialization
+ * Optimized to prevent unnecessary re-renders
  */
 export function useApiServices() {
-  const { isAuthenticated, isLoaded } = useAuthService();
+  const { isAuthenticated, isLoaded, updateAuthToken, hasValidToken } = useAuthService();
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+
+  // Memoize services object to prevent re-creation on every render
+  const services = useMemo(() => ({
+    auth: authService,
+    investment: investmentService,
+    community: communityService,
+    calculator: calculatorService,
+    // emergencyFund: emergencyFundService
+  }), []); // Empty dependency array since services are singletons
 
   // Initialize APIs once auth is loaded
   useEffect(() => {
@@ -23,24 +33,22 @@ export function useApiServices() {
     try {
       // Mark services as initialized
       setIsInitialized(true);
+      setError(null);
     } catch (err) {
       console.error('Failed to initialize API services:', err);
       setError(err instanceof Error ? err : new Error('Unknown error initializing API'));
     }
   }, [isLoaded]);
 
-  // Return all services, their status, and any errors
-  return { 
+  // Memoize the return object to prevent re-renders
+  return useMemo(() => ({ 
     isInitialized,
     isAuthenticated,
     error,
-    services: {
-      auth: authService,
-      investment: investmentService,
-      community: communityService,
-      calculator: calculatorService
-    }
-  };
+    services,
+    updateAuthToken,
+    hasValidToken
+  }), [isInitialized, isAuthenticated, error, services, updateAuthToken, hasValidToken]);
 }
 
 export default useApiServices;

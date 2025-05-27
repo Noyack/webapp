@@ -4,5 +4,10 @@
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
   ],
+  "compilerOptions": {
+    "noEmitOnError": false,
+    
+    // other options
+  }
   
 }

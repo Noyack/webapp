@@ -224,11 +224,19 @@ button:focus-visible {
   font-family: 'Jeko', sans-serif !important;
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 a{
   text-decoration: none !important;
 }
 #navigation a{
   align-items: center;
+}
+
+.noyack-green{
+  color: #2E7D32;
 }
 
 
@@ -254,6 +262,12 @@ a{
 }
 
 .sign-up-form button{
+  background-color: #011E5A;
+  color: #fff;
+  width: calc(min(330px, 80%));
+  border-radius: 5px;
+}
+.sign-in-button{
   background-color: #011E5A;
   color: #fff;
   width: calc(min(330px, 80%));
@@ -288,4 +302,7 @@ a{
   box-shadow: 0 1px 20px -10px #009DE1;
   width: 490px;
   height: 467px;
+}
+.underline{
+  text-decoration: underline !important;
 }
