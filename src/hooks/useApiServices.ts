@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import {useAuthService} from './useAuthService';
+import { useState, useEffect } from 'react';
+import { useAuthService } from './useAuthService';
 import { 
   authService, 
   investmentService, 
@@ -10,21 +10,21 @@ import {
 
 /**
  * Hook to initialize and manage API services
- * Optimized to prevent unnecessary re-renders
+ * Simplified without unnecessary memoization
  */
 export function useApiServices() {
   const { isAuthenticated, isLoaded, updateAuthToken, hasValidToken } = useAuthService();
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Memoize services object to prevent re-creation on every render
-  const services = useMemo(() => ({
+  // Services object (these are singletons, so no need to memoize)
+  const services = {
     auth: authService,
     investment: investmentService,
     community: communityService,
     calculator: calculatorService,
     // emergencyFund: emergencyFundService
-  }), []); // Empty dependency array since services are singletons
+  };
 
   // Initialize APIs once auth is loaded
   useEffect(() => {
@@ -40,15 +40,14 @@ export function useApiServices() {
     }
   }, [isLoaded]);
 
-  // Memoize the return object to prevent re-renders
-  return useMemo(() => ({ 
+  return { 
     isInitialized,
     isAuthenticated,
     error,
     services,
     updateAuthToken,
     hasValidToken
-  }), [isInitialized, isAuthenticated, error, services, updateAuthToken, hasValidToken]);
+  };
 }
 
 export default useApiServices;

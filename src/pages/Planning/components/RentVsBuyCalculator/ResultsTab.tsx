@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FC } from 'react';
 import {
   Typography,
@@ -10,14 +11,12 @@ import {
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   AccountBalance as BankIcon,
   Home as HomeIcon,
   MonetizationOn as MoneyIcon,
   LocationOn as LocationIcon,
-  Download as DownloadIcon,
   PictureAsPdf as PdfIcon,
   TableChart as CsvIcon
 } from '@mui/icons-material';
@@ -30,15 +29,13 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell
 } from 'recharts';
-import { RentVsBuyInputs, ResultData, SummaryData, RENT_VS_BUY_CHART_COLORS } from '../../../../types/rentVsBuy';
+import { RentVsBuyInputs, ResultData, SummaryData } from '../../../../types/rentVsBuy';
 import { formatCurrency, calculateTaxBenefits, calculatePMI, formatPercent, getCostOfLivingAdjustment } from '../../../../utils/rentVsBuyCalculations';
-import { usStates, costOfLivingByState } from '../../../../utils/locationData';
+import { usStates } from '../../../../utils/locationData';
 import { exportToPDF, exportToCSV, ExportData } from '../../../../utils/exportUtils';
 
 interface ResultsTabProps {

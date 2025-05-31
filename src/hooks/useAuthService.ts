@@ -1,115 +1,95 @@
-import { useLayoutEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { authService } from '../services';
-import { tokenManager } from '../utils/tokenManager';
 
 /**
  * Custom hook to manage authentication with the auth service
- * Optimized to prevent unnecessary re-renders
+ * Simplified version without unnecessary memoization
  */
 export function useAuthService() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
+  const [isTokenSet, setIsTokenSet] = useState(false);
+  const [isUpdatingToken, setIsUpdatingToken] = useState(false);
   
-  // Use refs to prevent re-renders from token updates
-  const isUpdatingToken = useRef(false);
-  const lastTokenUpdate = useRef(0);
-  const MIN_UPDATE_INTERVAL = 30000; // 30 seconds minimum between updates
+  // Simple derived state
+  const isAuthenticated = isSignedIn && isTokenSet;
   
-  // Memoize the authentication status to prevent re-renders
-  const isAuthenticated = useMemo(() => {
-    return isSignedIn && tokenManager.hasValidToken();
-  }, [isSignedIn]); // Only depend on isSignedIn, not token validity
-
-  // Update auth token function - now with throttling
-  const updateAuthToken = useCallback(async (): Promise<boolean> => {
-    // Prevent rapid successive token updates
-    const now = Date.now();
-    if (isUpdatingToken.current || (now - lastTokenUpdate.current) < MIN_UPDATE_INTERVAL) {
-      return tokenManager.hasValidToken();
+  // Update auth token function
+  const updateAuthToken = async (): Promise<boolean> => {
+    if (isUpdatingToken || !isLoaded || !isSignedIn) {
+      return false;
     }
 
     try {
-      isUpdatingToken.current = true;
+      setIsUpdatingToken(true);
       
-      if (isSignedIn) {
-        const token = await getToken({ template: "noyack" });
-        if (token) {
-          // Store token in localStorage with 50-minute expiry (Clerk tokens last 1 hour)
-          authService.setAuthToken(token, 50 * 60); // 50 minutes
-          lastTokenUpdate.current = now;
-          return true;
-        }
+      const token = await getToken({ template: "noyack" });
+      if (token) {
+        // Store token in localStorage with 50-minute expiry (Clerk tokens last 1 hour)
+        authService.setAuthToken(token, 50 * 60); // 50 minutes
+        setIsTokenSet(true);
+        return true;
       } else {
         authService.clearAuthToken();
+        setIsTokenSet(false);
         return false;
       }
     } catch (error) {
       console.error('Failed to update auth token:', error);
+      authService.clearAuthToken();
+      setIsTokenSet(false);
+      return false;
     } finally {
-      isUpdatingToken.current = false;
+      setIsUpdatingToken(false);
     }
-    
-    return false;
-  }, [isSignedIn, getToken]);
+  };
 
-  // Silent token refresh function
-  const silentTokenRefresh = useCallback(async () => {
-    if (!isSignedIn || !tokenManager.shouldRefreshToken()) {
-      return;
-    }
-    
-    try {
-      await updateAuthToken();
-    } catch (error) {
-      console.error('Silent token refresh failed:', error);
-    }
-  }, [isSignedIn, updateAuthToken]);
+  // Check if we have a valid token
+  const hasValidToken = (): boolean => {
+    return authService.hasValidToken();
+  };
 
-  // Initialize token only once when auth is loaded
-  useLayoutEffect(() => {
+  // Initialize token when auth is loaded and user is signed in
+  useEffect(() => {
     if (!isLoaded) return;
     
-    const initializeAuth = async () => {
-      if (isSignedIn && !tokenManager.hasValidToken()) {
-        await updateAuthToken();
-      } else if (!isSignedIn) {
-        authService.clearAuthToken();
+    if (isSignedIn) {
+      // Check if we already have a valid token
+      if (hasValidToken()) {
+        setIsTokenSet(true);
+      } else {
+        // Get new token
+        updateAuthToken();
       }
-    };
+    } else {
+      // User is not signed in, clear everything
+      authService.clearAuthToken();
+      setIsTokenSet(false);
+    }
+  }, [isLoaded, isSignedIn]);
 
-    initializeAuth();
-  }, [isLoaded, isSignedIn, updateAuthToken]);
-
-  // Set up background token refresh
-  useLayoutEffect(() => {
+  // Token refresh on visibility change (when user comes back to tab)
+  useEffect(() => {
     if (!isSignedIn) return;
 
-    // Check for token refresh every 5 minutes
-    const intervalId = setInterval(silentTokenRefresh, 5 * 60 * 1000);
-
-    // Also refresh on visibility change
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        silentTokenRefresh();
+      if (document.visibilityState === 'visible' && !hasValidToken()) {
+        updateAuthToken();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isSignedIn, silentTokenRefresh]);
+  }, [isSignedIn]);
 
-  // Memoize hasValidToken function to prevent re-creates
-  const hasValidToken = useCallback(() => tokenManager.hasValidToken(), []);
-
-  return useMemo(() => ({
+  return {
     isAuthenticated,
     isLoaded,
     authService,
     updateAuthToken,
     hasValidToken,
-  }), [isAuthenticated, isLoaded, updateAuthToken, hasValidToken]);
+  };
 }
