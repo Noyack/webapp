@@ -12,7 +12,7 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
   const location = useLocation()
   const {setView} = useContext(ViewContext)
   const learn = ["community", "planning", "bookmark", "wealthview"]
-  const invest = ["invest"]
+  const invest = ["invest", "account", "funding", "wallet"]
   const path = location.pathname.split('/')[1]
 
   useEffect(()=>{

@@ -4,11 +4,16 @@ import Logo from '../../assets/NOYACK Logo transparent background .png'
 import { FaMoneyBillTransfer } from "react-icons/fa6";
 import { BiSolidCalendarEvent, BiSolidDashboard } from "react-icons/bi";
 import { HiAcademicCap, HiChartPie } from "react-icons/hi2";
+import { RiAccountBoxFill } from "react-icons/ri";
 import { MenuBook } from "@mui/icons-material";
 import ViewToggle from "../UI/NavToggle";
 import { useContext } from "react";
 import { ViewContext } from "../../context/ViewContext";
 import { PiBooksFill } from "react-icons/pi";
+import { IoWallet } from "react-icons/io5";
+import { RiRefund2Fill } from "react-icons/ri";
+
+
 
 
 function LearnNav (){
@@ -51,10 +56,21 @@ function InvestNav (){
         <BiSolidDashboard style={{width:28, height:28}} />
           Dashboard
         </Link>
+        <Link to="/account" className="flex p-2 hover:bg-gray-100 rounded gap-1">
+        <RiAccountBoxFill style={{width:28, height:28}} />
+          Account
+        </Link>
         <Link to="/invest" className="flex p-2 hover:bg-gray-100 rounded gap-1">
-        {/* <CurrencyExchange /> */}
         <FaMoneyBillTransfer style={{width:28, height:28}} />
           Invest
+        </Link>
+        <Link to="/wallet" className="flex p-2 hover:bg-gray-100 rounded gap-1">
+        <IoWallet style={{width:28, height:28}} />
+          Wallet
+        </Link>
+        <Link to="/funding" className="flex p-2 hover:bg-gray-100 rounded gap-1">
+        <RiRefund2Fill style={{width:28, height:28}} />
+          IRA Funding
         </Link>
       </div>
   )

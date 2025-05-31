@@ -1,6 +1,5 @@
-import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
+import React, { useContext, useState, Suspense, lazy, FC, useEffect } from "react";
 import { SignedIn, SignedOut } from "@clerk/clerk-react";
-import { useContext, useLayoutEffect, useState, Suspense, lazy, FC, useCallback, useMemo } from "react";
 import DesktopLayout from "./components/Layout/DesktopLayout";
 import AuthPage from "./pages/Auth/AuthPage";
 import useApiServices from "./hooks/useApiServices";
@@ -27,95 +26,96 @@ interface ResponsiveLayoutProps {
 
 // Create a wrapper component that will maintain child component identity
 const ResponsiveLayout: FC<ResponsiveLayoutProps> = ({ isMobile, children }) => {
-    return (_jsxs(_Fragment, { children: [_jsx("div", { style: {
-                    display: isMobile ? 'block' : 'none',
-                }, children: _jsx(MobileView, { children: children }) }), _jsx("div", { style: { display: isMobile ? 'none' : 'block' }, children: _jsx(DesktopLayout, { children: children }) })] }));
+  return (
+    <>
+      <div style={{ display: isMobile ? 'block' : 'none' }}>
+        <MobileView>{children}</MobileView>
+      </div>
+      <div style={{ display: isMobile ? 'none' : 'block' }}>
+        <DesktopLayout>{children}</DesktopLayout>
+      </div>
+    </>
+  );
 };
 
 const App: FC = () => {
-    // Initialize API services with authentication
-    const { isInitialized, services, isAuthenticated, hasValidToken } = useApiServices();
-    const { userInfo, setUserInfo } = useContext(UserContext);
-    
-    // State to track if user needs onboarding
-    const [isNew, setIsNew] = useState<boolean>(true);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [hasLoadedUser, setHasLoadedUser] = useState<boolean>(false);
-    
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down(1020));
+  // Initialize API services with authentication
+  const { isInitialized, services, isAuthenticated, hasValidToken } = useApiServices();
+  const { userInfo, setUserInfo } = useContext(UserContext);
+  
+  // State to track if user needs onboarding
+  const [isNew, setIsNew] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasLoadedUser, setHasLoadedUser] = useState<boolean>(false);
+  
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down(1020));
 
-    // Memoize the user check function to prevent re-creation
-    const checkUserStatus = useCallback(async () => {
-        if (!isInitialized || !isAuthenticated || !hasValidToken() || hasLoadedUser) {
-            return;
-        }
+  // Check user status function
+  const checkUserStatus = async () => {
+    // Wait for both initialization and authentication
+    if (!isInitialized || !isAuthenticated || !hasValidToken() || hasLoadedUser) {
+      if (!isAuthenticated) {
+        setIsLoading(false); // Stop loading if not authenticated
+      }
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      const user = await services.auth.getCurrentUser();
+      if (user) {
+        setUserInfo(user);
+        setIsNew(user.onboarding);
+        setHasLoadedUser(true);
+      }
+    } catch (error) {
+      console.error("Failed to check user status:", error);
+      // Default to showing onboarding if we can't determine status
+      setIsNew(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check if user is new (needs onboarding) - only load once
+  useEffect(() => {
+    checkUserStatus();
+  }, [isInitialized, isAuthenticated]);
+
+  // Show loading while initializing APIs or checking user status
+  // Only show loading spinner if we're authenticated but still loading user data
+  if (isAuthenticated && (!isInitialized || isLoading)) {
+    return <LoadingSpinner />;
+  }
+
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <>
+        <SignedOut>
+          <AuthPage isMobile={isMobile} />
+        </SignedOut>
         
-        try {
-            setIsLoading(true);
-            const user = await services.auth.getCurrentUser();
-            if (user) {
-                setUserInfo(user);
-                setIsNew(user.onboarding);
-                setHasLoadedUser(true);
-            }
-        }
-        catch (error) {
-            console.error("Failed to check user status:", error);
-            // Default to showing onboarding if we can't determine status
-        }
-        finally {
-            setIsLoading(false);
-        }
-    }, [isInitialized, isAuthenticated, hasValidToken, services.auth, hasLoadedUser, setUserInfo]);
-
-    // Check if user is new (needs onboarding) - only load once
-    useLayoutEffect(() => {
-        checkUserStatus();
-    }, [checkUserStatus]);
-
-    // Memoize the main content to prevent unnecessary re-renders
-    const mainContent = useMemo(() => {
-        // Show loading while initializing APIs or checking user status
-        if (isAuthenticated && (!isInitialized || isLoading)) {
-            return <LoadingSpinner />;
-        }
-
-        return (
+        <SignedIn>
+          {((userInfo && isNew) || (isAuthenticated && !userInfo && !isLoading)) && (
             <Suspense fallback={<LoadingSpinner />}>
-                {_jsxs(_Fragment, { 
-                    children: [
-                        _jsx(SignedOut, { 
-                            children: _jsx(AuthPage, { isMobile: isMobile }) 
-                        }), 
-                        _jsxs(SignedIn, { 
-                            children: [
-                                ((userInfo && isNew) || (isAuthenticated && !userInfo)) && (
-                                    <Suspense fallback={<LoadingSpinner />}>
-                                        {_jsx(Creation, { isMobile: Boolean(isMobile) })}
-                                    </Suspense>
-                                ),
-                                (userInfo && isNew === false) && (
-                                    _jsx(ViewProvider, { 
-                                        children: _jsx(ResponsiveLayout, { 
-                                            isMobile: isMobile, 
-                                            children: (
-                                                <Suspense fallback={<LoadingSpinner />}>
-                                                    {_jsx(AppRoutes, {})}
-                                                </Suspense>
-                                            ) 
-                                        }) 
-                                    })
-                                )
-                            ]
-                        })
-                    ]
-                })}
+              <Creation isMobile={Boolean(isMobile)} />
             </Suspense>
-        );
-    }, [isAuthenticated, isInitialized, isLoading, isMobile, userInfo, isNew]);
-
-    return mainContent;
+          )}
+          
+          {(userInfo && isNew === false) && (
+            <ViewProvider>
+              <ResponsiveLayout isMobile={isMobile}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AppRoutes />
+                </Suspense>
+              </ResponsiveLayout>
+            </ViewProvider>
+          )}
+        </SignedIn>
+      </>
+    </Suspense>
+  );
 };
 
 export default App;

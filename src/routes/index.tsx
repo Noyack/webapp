@@ -4,15 +4,18 @@ import { Suspense, lazy, useEffect, FC } from 'react';
 import { preloadComponent, preloadRoutes } from '../utils/preload';
 
 // Lazy load all page components with preloading
+const Account = lazy(() => import('../pages/EAccount/EAccount'));
 const Dashboard = lazy(preloadComponent(() => import('../pages/Dashboard/Dashboard')));
+const Events = lazy(() => import('../pages/Events/Events'));
 const Invest = lazy(preloadComponent(() => import('../pages/Invest/Invest')));
+const IRAFunding = lazy(preloadComponent(() => import('../pages/IRAFunding/IRAFunding')));
+const Wallet = lazy(preloadComponent(() => import('../pages/Wallet/Wallet')));
+const Library = lazy(() => import('../pages/Library/Library'));
 const NotFound = lazy(() => import('./404'));
 const Planning = lazy(preloadComponent(() => import('../pages/Planning/Planning')));
 // const Bookmark = lazy(() => import('../pages/Bookmark/Bookmark'));
-const Wealthview = lazy(preloadComponent(() => import('../pages/Wealthview/Wealthview')));
-const Events = lazy(() => import('../pages/Events/Events'));
 const Support = lazy(() => import('../pages/Support/Support'));
-const Library = lazy(() => import('../pages/Library/Library'));
+const Wealthview = lazy(preloadComponent(() => import('../pages/Wealthview/Wealthview')));
 
 // Loading component
 const LoadingSpinner: FC = () => (
@@ -59,6 +62,30 @@ const AppRoutes: FC = () => {
         element={
           <Suspense fallback={<LoadingSpinner />}>
             <InvestWithPreload />
+          </Suspense>
+        } 
+      />
+      <Route 
+        path="/account" 
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <Account />
+          </Suspense>
+        } 
+      />
+      <Route 
+        path="/funding" 
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <IRAFunding />
+          </Suspense>
+        } 
+      />
+      <Route 
+        path="/wallet" 
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <Wallet />
           </Suspense>
         } 
       />
