@@ -25,6 +25,7 @@ export interface SummaryData {
   finalEquity: number;
   netBuyingCost: number;
   savingsAfterTimePeriod: number;
+  totalTaxSavings?: number; // Add actual total tax savings
 }
 
 // Main input interface for all calculator inputs
@@ -60,34 +61,34 @@ export interface RentVsBuyInputs {
   annualReturnOnSavings: number;
 }
 
-// Default values for all inputs
+// FIXED: Default values - all financial inputs set to 0, text inputs empty to force user entry
 export const DEFAULT_RENT_VS_BUY_INPUTS: RentVsBuyInputs = {
   location: {
     city: '',
     state: '',
   },
   maritalStatus: 'single',
-  annualIncome: 100000,
+  annualIncome: 0,
   
-  monthlyRent: 2000,
-  homePrice: 400000,
-  downPaymentPercent: 20,
-  timeHorizon: 10,
+  monthlyRent: 0,
+  homePrice: 0,
+  downPaymentPercent: 0,
+  timeHorizon: 0,
   
-  mortgageTerm: 30,
-  interestRate: 5.5,
+  mortgageTerm: 0,
+  interestRate: 0,
   
-  homeInsuranceRate: 0.5,
-  monthlyHOAFees: 200,
-  annualMaintenancePercent: 1,
-  monthlyAdditionalExpenses: 100,
-  annualHomeValueIncrease: 3,
+  homeInsuranceRate: 0,
+  monthlyHOAFees: 0,
+  annualMaintenancePercent: 0,
+  monthlyAdditionalExpenses: 0,
+  annualHomeValueIncrease: 0,
   
-  annualRentIncrease: 3,
-  monthlyRentersInsurance: 30,
+  annualRentIncrease: 0,
+  monthlyRentersInsurance: 0,
   
-  annualInflation: 2,
-  annualReturnOnSavings: 7,
+  annualInflation: 0,
+  annualReturnOnSavings: 0,
 };
 
 // Empty results for initial state
@@ -100,6 +101,7 @@ export const EMPTY_RENT_VS_BUY_RESULTS: { results: ResultData[]; summary: Summar
     finalEquity: 0,
     netBuyingCost: 0,
     savingsAfterTimePeriod: 0,
+    totalTaxSavings: 0,
   },
   breakEvenYear: null,
 };
@@ -109,4 +111,4 @@ export const RENT_VS_BUY_CHART_COLORS = {
   primary: '#1f77b4',    // Blue
   secondary: '#ff7f0e',  // Orange  
   tertiary: '#2ca02c'    // Green
-}; 
+};

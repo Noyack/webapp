@@ -1,14 +1,18 @@
 // Modified component with responsive tabs
-import { AccountBalance, AttachMoney, KeyboardArrowRightOutlined, LocalAtmOutlined } from "@mui/icons-material"
-import { ReactNode, useState, useRef, useEffect } from "react";
+import {  KeyboardArrowRightOutlined } from "@mui/icons-material"
+import { ReactNode, useState, useRef, useEffect, useContext, FC } from "react";
 import FundStatus from "./components/FundSatus";
 import RetirementCalc from "./components/RetiermentCalc";
-import Community from "./components/Community";
-import FIRECalculator from "./components/FIRECalculator";
-import { Box, Tab, Tabs, useMediaQuery, useTheme } from "@mui/material";
-import Aside from "../../components/Layout/Aside";
+import Academy from "./components/Academy";
+import { Box, Tab, Tabs, Typography } from "@mui/material";
 import { FundStatusElement } from "../../types";
 import { Link } from "react-router-dom";
+import DebtPayoffPlanner from "../Planning/DebtPayoffPlanner";
+import WealthStatus from "./components/WealthStatus";
+import { authService } from "../../services";
+import { UserContext } from "../../context/UserContext";
+import hubspotService from "../../services/hubspot.service";
+import LoadingSpinner from "../../components/UI/Loader";
 
 // Define type for tab panel props
 interface TabPanelProps {
@@ -42,12 +46,28 @@ function a11yProps(index: number) {
 
 const Dashboard = () => {
   const [value, setValue] = useState<number>(0);
-  const theme = useTheme();
-  const isFullWidth = useMediaQuery(theme.breakpoints.up(1492));
-  // const isMobile = useMediaQuery(theme.breakpoints.down(1020));
+  const { userInfo } = useContext(UserContext)
   const [showLeftFade, setShowLeftFade] = useState(false);
   const [showRightFade, setShowRightFade] = useState(false);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [wealth, setWealth] = useState({income:0,expenses:0, debt:0})
+  const [events, setEvents] = useState([])
+  const [ fetching, setFetching ] = useState<boolean>(false)
+  useEffect(()=>{
+    const fetch = async()=>{
+      setFetching(()=>true)
+      if(userInfo?.id){
+      await authService.getWealth(userInfo?.id).then((res)=>{
+        setWealth({income:res.income.income, expenses:res.expenses.expenses, debt:res.debt.debt})
+      })
+      await hubspotService.getSummaryEvent().then((res)=>{
+        setEvents(res.response)
+      })
+      setFetching(()=>false)
+    }
+  }
+  fetch() 
+  },[userInfo?.id])
 
   // Check if scrolling is needed and update fade indicators
   const checkScrollPosition = () => {
@@ -82,34 +102,26 @@ const Dashboard = () => {
 
   // Ensure statusElements has a consistent structure with IDs
   const statusElements: FundStatusElement[] = [
-    {
-      id: 1,
-      title: "Distribution Last quarter",
-      value: "$565,541",
-      icon: <AccountBalance sx={{height:"15px", color:"#fff"}}/>
-    },
-    {
-      id: 2,
-      title: "Target Annual Returns",
-      value: "12-15%",
-      icon: <AttachMoney sx={{height:"15px", color:"#fff"}}/>
-    },
-    {
-      id: 3,
-      title: "Resident Impact",
-      value: "$756k+",
-      icon: <LocalAtmOutlined sx={{height:"15px", color:"#fff"}}/>
-    }
+    // {
+    //   id: 1,
+    //   title: "Resident Impact",
+    //   value: "$756k+",
+    //   icon: <LocalAtmOutlined sx={{height:"15px", color:"#fff"}}/>
+    // }
   ];
 
   const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
   };
 
+  if(fetching)
+    return(<LoadingSpinner />)
+
   return (
-    <div className="flex">
+    <div className="flex justify-center">
       <div className="flex flex-col gap-10 px-2">
         <FundStatus statusElements={statusElements} />
+        <WealthStatus wealth={wealth} />
         <div>
           {/* New responsive tab layout */}
           <div className="relative flex flex-col w-full">
@@ -141,7 +153,7 @@ const Dashboard = () => {
                     }}
                   >
                     <Tab label="Retirement Projection" {...a11yProps(0)} />
-                    <Tab label="FIRE Calculator" {...a11yProps(1)} />
+                    <Tab label="Debt Payoff" {...a11yProps(1)} />
                   </Tabs>
                 </div>
               </div>
@@ -154,27 +166,25 @@ const Dashboard = () => {
             
             {/* "See More" link always on the right */}
             <div className="flex justify-end mt-2 mb-2">
-              <Link to={"/planning"} className="flex items-center text-sm">
+              <Link to={"/tools"} className="flex items-center text-sm">
                 See More
                 <KeyboardArrowRightOutlined fontSize="small" />
               </Link>
             </div>
+              <Typography variant="caption" textAlign={'center'}>
+                **These calculators are simplified solutions of our more advanced tools, see more or navigate to the Tools page**
+              </Typography>
           </div>
 
           <CustomTabPanel value={value} index={0}>
             <RetirementCalc />
           </CustomTabPanel>
           <CustomTabPanel value={value} index={1}>
-            <FIRECalculator />
+            <DebtPayoffPlanner />
           </CustomTabPanel>
         </div>
-        <Community />
+        < Academy events={events} fetching={fetching}/>
       </div>
-      {isFullWidth && (
-        <div className="h-screen sticky top-0">
-          <Aside />
-        </div>
-      )}
     </div>
   );
 };

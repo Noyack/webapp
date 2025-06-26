@@ -67,7 +67,7 @@ const RetirementCalculator: FC = () => {
   useEffect(() => {
     if (inputs.state) {
       const cities = cityData
-        .filter(city => city.state === inputs.state)
+        [inputs.state]
         .map(city => city.name);
       
       setAvailableCities(cities);

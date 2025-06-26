@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Main types file for the application
 // Keep all shared types here to maintain consistency
 
@@ -22,6 +23,41 @@ export interface User {
   plaidUserToken?: string;
   imageUrl: string;
 }
+export interface UserInfo {
+  [x: string]: string;
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  emailAddresses: Array<{
+    id: string;
+    emailAddress: string;
+    verification: {
+      status: string;
+    };
+  }>;
+  hasCompletedOnboarding: boolean;
+  onboarding: boolean;
+  plaidUserToken?: string;
+  imageUrl: string;
+}
+
+export type Subs = "free" | "community" | "inverstor";
+
+export interface Subscriptions{
+  id: string,
+  userId: string,
+  stripeCustomerId: string | null,
+  stripeSubscriptionId: string | null,
+  status: boolean,
+  plan: Subs,
+  currentPeriodStart: any ,
+  currentPeriodEnd: any,
+  createdAt: any,
+  updatedAt: any,
+  cancelAtPeriodEnd: any
+}
+
+export type subArr = Subscriptions[]
 
 export interface ClerkEmailObject {
   id: string;
@@ -347,6 +383,7 @@ export interface CommunityUpdate {
 }
 
 export interface Event {
+  name: ReactNode;
   id: string;
   title: string;
   date: string;
@@ -369,6 +406,7 @@ export interface Referral {
 }
 
 export interface CommunityProps {
+  fetching?: boolean;
   userId?: string;
   referralCode?: string;
   articles?: Article[];

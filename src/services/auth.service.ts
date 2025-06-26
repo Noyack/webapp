@@ -1,5 +1,5 @@
 import apiClient from './api-client';
-import { ContactDetails, User } from '../types';
+import { ContactDetails, Subscriptions, User, UserInfo } from '../types';
 import { tokenManager } from '../utils/tokenManager';
 
 /**
@@ -44,17 +44,32 @@ export class AuthService {
     age?: number;
     location?: string;
   }): Promise<User> {
-    const response = await apiClient.post<User>('/users', userData);
+    const response = await apiClient.post<User>('users', userData);
     return response.data;
   }
 
   /**
    * Get the current user's profile
    */
-  async getCurrentUser(): Promise<User> {
-    const response = await apiClient.get<User>('users/profile');
+  async getCurrentUser(): Promise<UserInfo> {
+    try{
+      const response = await apiClient.get<UserInfo>('users/profile');
+      return response.data;
+    }catch{
+      return null
+    }
+  }
+  
+  async getCurrentSub(userId: string): Promise<Subscriptions> {
+    const response = await apiClient.get<Subscriptions>(`v1/subscription/${userId}`);
     return response.data;
   }
+
+  async getWealth(userId: string): Promise<any> {
+    const response = await apiClient.get<any>(`users/profile/wealth/${userId}`,);
+    return response.data;
+  }
+
 
   /**
    * Update user profile
@@ -83,7 +98,7 @@ export class AuthService {
    * Complete user onboarding
    */
   async completeOnboarding(userId: string, onboardingData: unknown): Promise<User> {
-    const response = await apiClient.patch<User>(`/users/${userId}/onboarding`, onboardingData);
+    const response = await apiClient.patch<User>(`users/${userId}/onboarding`, onboardingData);
     return response.data;
   }
 }

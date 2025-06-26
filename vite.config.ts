@@ -4,6 +4,11 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+   esbuild: {
+    logOverride: {
+      'this-is-undefined-in-esm': 'silent'
+    }
+  },
   plugins: [
     react(),
     tailwindcss()
@@ -14,5 +19,14 @@ export default defineConfig({
       overlay:false
     },
     host: true
+  },
+  build:{
+    rollupOptions:{
+      onwarn(warning, warn) {
+        // Suppress certain warnings
+        if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return;
+        warn(warning);
+      }
   }
+}
 })

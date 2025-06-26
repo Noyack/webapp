@@ -52,6 +52,7 @@ function BasicInfo() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const { userInfo } = useContext(UserContext)
+
   // Initial form state
   const [formData, setFormData] = useState<PersonalInfoForm>({
     // Age and Retirement
@@ -98,13 +99,11 @@ function BasicInfo() {
 
   // Fetch user ID on component mount
   useEffect(() => {
-    const currentUserId = userInfo?.id; // Replace with actual user ID retrieval
-    // Fetch existing basic info if available
-    if (currentUserId) {
-      fetchUserBasicInfo(currentUserId);
-    }
+     if (userInfo?.id) {
+    fetchUserBasicInfo(userInfo.id);
+  }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userInfo]);
+  }, []);
 
   const handleIsEditing = () =>{
     setIsEditing(!isEditing)

@@ -52,10 +52,10 @@ export const UpcomingEvents = () => {
 
   return (
     <AnimatePresence mode='wait'>
-      <div className="flex flex-col gap-4 bg-white rounded-xl shadow-sm p-8 pb-8">
+      <div className="flex flex-col justify-between gap-4 bg-white rounded-xl shadow-sm p-8 pb-8 w-[290px]">
         <h3 className="text-xl font-semibold">Upcoming Events</h3>
         
-        <div className="relative">
+        <div className="flex-grow relative">
           <motion.div
             key={currentEventIndex}
             initial={{ opacity: 0, x: -10 }}

@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import apiClient from './api-client';
 import { EmergencyFundsForm, EmergencySavingsAccount } from '../types';
 

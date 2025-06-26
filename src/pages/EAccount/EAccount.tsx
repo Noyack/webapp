@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   Box,
   Stepper,
@@ -38,8 +38,13 @@ import {
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import { useAuth } from '@clerk/clerk-react';
 
-// Form data interface
+// Import the service we'll create
+import { equityTrustService, type AccountFormData } from '../../services/equityTrust.service';
+import { UserContext } from '../../context/UserContext';
+
+// Form data interface (updated to match backend)
 interface FormData {
   // Step 1: Account Holder
   firstName: string;
@@ -67,6 +72,10 @@ interface FormData {
   fundingMethod: string;
   estimatedFundingAmount: string;
   paymentMethod: string;
+  statementPreference: string;
+  employmentStatus: string;
+  occupationCategory: string;
+  occupation: string;
   
   // Step 3: Agreements
   custodialAgreement: boolean;
@@ -75,7 +84,7 @@ interface FormData {
   electronicSignature: boolean;
 }
 
-const steps = ['Account Holder', 'IRA', 'Sign'];
+const steps = ['Account Holder', 'IRA Details', 'Sign'];
 
 // Validation schemas for each step
 const step1Schema = Yup.object({
@@ -125,6 +134,7 @@ const step2Schema = Yup.object({
     .max(1000000, 'Amount must be less than $1,000,000')
     .required('Estimated funding amount is required'),
   paymentMethod: Yup.string().required('Payment method is required'),
+  employmentStatus: Yup.string().required('Employment status is required'),
 });
 
 const step3Schema = Yup.object({
@@ -138,14 +148,19 @@ const EAccount: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [applicationNumber, setApplicationNumber] = useState<string>('');
+  const [activityId, setActivityId] = useState<string>('');
   const [showSSN, setShowSSN] = useState(false);
   const [sameAsLegal, setSameAsLegal] = useState(true);
+  const [submitError, setSubmitError] = useState<string>('');
+
+  const { getToken } = useAuth();
+  const { userInfo } = useContext(UserContext)
 
   const formik = useFormik<FormData>({
     initialValues: {
       // Step 1
-      firstName: '',
-      lastName: '',
+      firstName: userInfo?.firstName || '',
+      lastName: userInfo?.lastName || '',
       dateOfBirth: '',
       legalAddress: '',
       city: '',
@@ -169,6 +184,10 @@ const EAccount: React.FC = () => {
       fundingMethod: '',
       estimatedFundingAmount: '',
       paymentMethod: '',
+      statementPreference: 'Electronic',
+      employmentStatus: '',
+      occupationCategory: '',
+      occupation: '',
       
       // Step 3
       custodialAgreement: false,
@@ -177,25 +196,84 @@ const EAccount: React.FC = () => {
       electronicSignature: false,
     },
     validationSchema: activeStep === 0 ? step1Schema : activeStep === 1 ? step2Schema : step3Schema,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    onSubmit: async (_values) => {
+    onSubmit: async (values) => {
       if (activeStep < steps.length - 1) {
         setActiveStep(activeStep + 1);
       } else {
-        setIsSubmitting(true);
-        try {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          setApplicationNumber('20056731');
-          setActiveStep(activeStep + 1);
-        } catch (error) {
-          console.error('Submission error:', error);
-        } finally {
-          setIsSubmitting(false);
-        }
+        await handleFinalSubmit(values);
       }
     },
   });
+
+  const handleFinalSubmit = async (values: FormData) => {
+    setIsSubmitting(true);
+    setSubmitError('');
+    
+    try {
+      // Get auth token from Clerk
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      // Transform form data to match backend interface
+      const accountData: AccountFormData = {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        dateOfBirth: values.dateOfBirth,
+        ssn: values.ssn,
+        married: false, // You can add this field if needed
+        minor: false,
+        legalAddress: values.legalAddress,
+        city: values.city,
+        state: values.state,
+        zipCode: values.zipCode,
+        mailingAddress: sameAsLegal ? values.legalAddress : values.mailingAddress,
+        mailingCity: sameAsLegal ? values.city : values.mailingCity,
+        mailingState: sameAsLegal ? values.state : values.mailingState,
+        mailingZipCode: sameAsLegal ? values.zipCode : values.mailingZipCode,
+        phoneNumber: values.phoneNumber,
+        email: userInfo?.email || '',
+        employerName: values.employerName,
+        employerAddress: values.employerAddress,
+        citizenship: values.citizenship,
+        iraType: values.iraType,
+        accountPurpose: values.accountPurpose,
+        initialSourceOfFunds: values.initialSourceOfFunds,
+        ongoingSourceOfFunds: values.ongoingSourceOfFunds,
+        fundingMethod: values.fundingMethod,
+        estimatedFundingAmount: values.estimatedFundingAmount,
+        paymentMethod: values.paymentMethod,
+        statementPreference: values.statementPreference,
+        employmentStatus: values.employmentStatus,
+        occupationCategory: values.occupationCategory,
+        occupation: values.occupation,
+        investmentTypes: {
+          Traditional: true,
+          Alternative: false,
+          Digital: false,
+          Metals: false,
+        },
+        beneficiaries: [], // You can add beneficiary collection if needed
+      };
+
+      // Submit to backend
+      const response = await equityTrustService.openAccount(accountData, '3');
+      
+      setApplicationNumber(response.accountNumber);
+      setActivityId(response.activityId);
+      setActiveStep(activeStep + 1);
+      
+      // Optionally store account info in local state/context for use in other components
+      localStorage.setItem('userAccountNumber', response.accountNumber);
+      localStorage.setItem('userActivityId', response.activityId);
+      
+    } catch (error) {
+      console.error('Account opening error:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to open account');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Format phone number as user types
   const formatPhoneNumber = (value: string) => {
@@ -240,7 +318,7 @@ const EAccount: React.FC = () => {
     switch (step) {
       case 0:
         return (
-          <Box component="form" onSubmit={formik.handleSubmit}>
+          <>
             <Typography variant="h6" gutterBottom>
               Personal Information
             </Typography>
@@ -257,7 +335,6 @@ const EAccount: React.FC = () => {
                   error={formik.touched.firstName && Boolean(formik.errors.firstName)}
                   helperText={formik.touched.firstName && formik.errors.firstName}
                   required
-                  inputProps={{ 'aria-label': 'First Name' }}
                 />
               </Grid>
               
@@ -272,7 +349,6 @@ const EAccount: React.FC = () => {
                   error={formik.touched.lastName && Boolean(formik.errors.lastName)}
                   helperText={formik.touched.lastName && formik.errors.lastName}
                   required
-                  inputProps={{ 'aria-label': 'Last Name' }}
                 />
               </Grid>
 
@@ -289,7 +365,6 @@ const EAccount: React.FC = () => {
                   helperText={formik.touched.dateOfBirth && formik.errors.dateOfBirth}
                   required
                   InputLabelProps={{ shrink: true }}
-                  inputProps={{ 'aria-label': 'Date of Birth' }}
                 />
               </Grid>
 
@@ -303,7 +378,6 @@ const EAccount: React.FC = () => {
                     onBlur={formik.handleBlur}
                     error={formik.touched.citizenship && Boolean(formik.errors.citizenship)}
                     label="Citizenship Status"
-                    aria-label="Citizenship Status"
                   >
                     <MenuItem value="us_citizen">US Citizen</MenuItem>
                     <MenuItem value="permanent_resident">Permanent Resident</MenuItem>
@@ -326,7 +400,6 @@ const EAccount: React.FC = () => {
                   error={formik.touched.legalAddress && Boolean(formik.errors.legalAddress)}
                   helperText={formik.touched.legalAddress && formik.errors.legalAddress}
                   required
-                  inputProps={{ 'aria-label': 'Legal Address' }}
                 />
               </Grid>
 
@@ -341,7 +414,6 @@ const EAccount: React.FC = () => {
                   error={formik.touched.city && Boolean(formik.errors.city)}
                   helperText={formik.touched.city && formik.errors.city}
                   required
-                  inputProps={{ 'aria-label': 'City' }}
                 />
               </Grid>
 
@@ -355,7 +427,6 @@ const EAccount: React.FC = () => {
                     onBlur={formik.handleBlur}
                     error={formik.touched.state && Boolean(formik.errors.state)}
                     label="State"
-                    aria-label="State"
                   >
                     {['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'].map((state) => (
                       <MenuItem key={state} value={state}>{state}</MenuItem>
@@ -378,7 +449,7 @@ const EAccount: React.FC = () => {
                   error={formik.touched.zipCode && Boolean(formik.errors.zipCode)}
                   helperText={formik.touched.zipCode && formik.errors.zipCode}
                   required
-                  inputProps={{ 'aria-label': 'ZIP Code', maxLength: 10 }}
+                  inputProps={{ maxLength: 10 }}
                 />
               </Grid>
 
@@ -388,7 +459,6 @@ const EAccount: React.FC = () => {
                     <Checkbox
                       checked={sameAsLegal}
                       onChange={handleSameAsLegalChange}
-                      aria-label="Mailing address same as legal address"
                     />
                   }
                   label="Mailing address is the same as legal address"
@@ -405,7 +475,6 @@ const EAccount: React.FC = () => {
                       value={formik.values.mailingAddress}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      inputProps={{ 'aria-label': 'Mailing Address' }}
                     />
                   </Grid>
 
@@ -417,7 +486,6 @@ const EAccount: React.FC = () => {
                       value={formik.values.mailingCity}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      inputProps={{ 'aria-label': 'Mailing City' }}
                     />
                   </Grid>
 
@@ -430,7 +498,6 @@ const EAccount: React.FC = () => {
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
                         label="Mailing State"
-                        aria-label="Mailing State"
                       >
                         {['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'].map((state) => (
                           <MenuItem key={state} value={state}>{state}</MenuItem>
@@ -447,7 +514,7 @@ const EAccount: React.FC = () => {
                       value={formik.values.mailingZipCode}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
-                      inputProps={{ 'aria-label': 'Mailing ZIP Code', maxLength: 10 }}
+                      inputProps={{ maxLength: 10 }}
                     />
                   </Grid>
                 </>
@@ -468,7 +535,6 @@ const EAccount: React.FC = () => {
                   helperText={formik.touched.phoneNumber && formik.errors.phoneNumber}
                   required
                   placeholder="(XXX) XXX-XXXX"
-                  inputProps={{ 'aria-label': 'Phone Number' }}
                 />
               </Grid>
 
@@ -488,12 +554,10 @@ const EAccount: React.FC = () => {
                   helperText={formik.touched.ssn && formik.errors.ssn}
                   required
                   placeholder="XXX-XX-XXXX"
-                  inputProps={{ 'aria-label': 'Social Security Number' }}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton
-                          aria-label="toggle SSN visibility"
                           onClick={() => setShowSSN(!showSSN)}
                           edge="end"
                         >
@@ -513,7 +577,6 @@ const EAccount: React.FC = () => {
                   value={formik.values.employerName}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  inputProps={{ 'aria-label': 'Employer Name or Income Source' }}
                 />
               </Grid>
 
@@ -525,16 +588,15 @@ const EAccount: React.FC = () => {
                   value={formik.values.employerAddress}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  inputProps={{ 'aria-label': 'Employer Address' }}
                 />
               </Grid>
             </Grid>
-          </Box>
+          </>
         );
 
       case 1:
         return (
-          <Box component="form" onSubmit={formik.handleSubmit}>
+          <>
             <Typography variant="h6" gutterBottom>
               IRA Account Details
             </Typography>
@@ -550,7 +612,6 @@ const EAccount: React.FC = () => {
                     onBlur={formik.handleBlur}
                     error={formik.touched.iraType && Boolean(formik.errors.iraType)}
                     label="Select Type of IRA"
-                    aria-label="Select Type of IRA"
                   >
                     <MenuItem value="traditional">Traditional IRA</MenuItem>
                     <MenuItem value="roth">Roth IRA</MenuItem>
@@ -573,7 +634,6 @@ const EAccount: React.FC = () => {
                     onBlur={formik.handleBlur}
                     error={formik.touched.accountPurpose && Boolean(formik.errors.accountPurpose)}
                     label="Select Account Purpose"
-                    aria-label="Select Account Purpose"
                   >
                     <MenuItem value="retirement">Retirement Savings</MenuItem>
                     <MenuItem value="rollover">401(k) Rollover</MenuItem>
@@ -596,7 +656,6 @@ const EAccount: React.FC = () => {
                     onBlur={formik.handleBlur}
                     error={formik.touched.initialSourceOfFunds && Boolean(formik.errors.initialSourceOfFunds)}
                     label="Select Initial Source of Funds"
-                    aria-label="Select Initial Source of Funds"
                   >
                     <MenuItem value="employment_income">Employment Income</MenuItem>
                     <MenuItem value="self_employment">Self-Employment Income</MenuItem>
@@ -622,7 +681,6 @@ const EAccount: React.FC = () => {
                     onBlur={formik.handleBlur}
                     error={formik.touched.ongoingSourceOfFunds && Boolean(formik.errors.ongoingSourceOfFunds)}
                     label="Select Ongoing Source of Funds"
-                    aria-label="Select Ongoing Source of Funds"
                   >
                     <MenuItem value="employment_income">Employment Income</MenuItem>
                     <MenuItem value="self_employment">Self-Employment Income</MenuItem>
@@ -646,7 +704,6 @@ const EAccount: React.FC = () => {
                     onBlur={formik.handleBlur}
                     error={formik.touched.fundingMethod && Boolean(formik.errors.fundingMethod)}
                     label="Select IRA Funding Method"
-                    aria-label="Select IRA Funding Method"
                   >
                     <MenuItem value="ach_transfer">ACH Bank Transfer</MenuItem>
                     <MenuItem value="wire_transfer">Wire Transfer</MenuItem>
@@ -675,7 +732,7 @@ const EAccount: React.FC = () => {
                   InputProps={{
                     startAdornment: <InputAdornment position="start">$</InputAdornment>,
                   }}
-                  inputProps={{ 'aria-label': 'Estimated Funding Amount', min: 1, max: 1000000 }}
+                  inputProps={{ min: 1, max: 1000000 }}
                 />
               </Grid>
 
@@ -689,7 +746,6 @@ const EAccount: React.FC = () => {
                     onBlur={formik.handleBlur}
                     error={formik.touched.paymentMethod && Boolean(formik.errors.paymentMethod)}
                     label="Select IRA Payment Method"
-                    aria-label="Select IRA Payment Method"
                   >
                     <MenuItem value="one_time">One-time Payment</MenuItem>
                     <MenuItem value="monthly">Monthly Automatic</MenuItem>
@@ -701,13 +757,75 @@ const EAccount: React.FC = () => {
                   )}
                 </FormControl>
               </Grid>
+
+              <Grid item xs={12}>
+                <FormControl fullWidth required>
+                  <InputLabel>Employment Status</InputLabel>
+                  <Select
+                    name="employmentStatus"
+                    value={formik.values.employmentStatus}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    error={formik.touched.employmentStatus && Boolean(formik.errors.employmentStatus)}
+                    label="Employment Status"
+                  >
+                    <MenuItem value="employed">Employed</MenuItem>
+                    <MenuItem value="self_employed">Self-Employed</MenuItem>
+                    <MenuItem value="unemployed">Unemployed</MenuItem>
+                    <MenuItem value="retired">Retired</MenuItem>
+                    <MenuItem value="student">Student</MenuItem>
+                    <MenuItem value="other">Other</MenuItem>
+                  </Select>
+                  {formik.touched.employmentStatus && formik.errors.employmentStatus && (
+                    <FormHelperText error>{formik.errors.employmentStatus}</FormHelperText>
+                  )}
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  name="occupationCategory"
+                  label="Occupation Category (Optional)"
+                  value={formik.values.occupationCategory}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  name="occupation"
+                  label="Specific Occupation (Optional)"
+                  value={formik.values.occupation}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <FormControl fullWidth required>
+                  <InputLabel>Statement Preference</InputLabel>
+                  <Select
+                    name="statementPreference"
+                    value={formik.values.statementPreference}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    label="Statement Preference"
+                  >
+                    <MenuItem value="Electronic">Electronic</MenuItem>
+                    <MenuItem value="Paper">Paper</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
-          </Box>
+          </>
         );
 
       case 2:
         return (
-          <Box component="form" onSubmit={formik.handleSubmit}>
+          <>
             <Typography variant="h6" gutterBottom>
               Review and Sign Documents
             </Typography>
@@ -729,7 +847,6 @@ const EAccount: React.FC = () => {
                         size="small"
                         startIcon={<Visibility />}
                         onClick={() => window.open('/documents/custodial-agreement.pdf', '_blank')}
-                        aria-label="View Custodial Account Agreement"
                       >
                         View
                       </Button>
@@ -741,7 +858,6 @@ const EAccount: React.FC = () => {
                           checked={formik.values.custodialAgreement}
                           onChange={formik.handleChange}
                           color="primary"
-                          aria-label="I have read and agree to the Custodial Account Agreement"
                         />
                       }
                       label="I have read and agree to the Custodial Account Agreement"
@@ -767,7 +883,6 @@ const EAccount: React.FC = () => {
                         size="small"
                         startIcon={<Visibility />}
                         onClick={() => window.open('/documents/fee-schedule.pdf', '_blank')}
-                        aria-label="View IRA Fee Schedule"
                       >
                         View
                       </Button>
@@ -779,7 +894,6 @@ const EAccount: React.FC = () => {
                           checked={formik.values.feeSchedule}
                           onChange={formik.handleChange}
                           color="primary"
-                          aria-label="I have read and agree to the IRA Fee Schedule"
                         />
                       }
                       label="I have read and agree to the IRA Fee Schedule"
@@ -803,7 +917,6 @@ const EAccount: React.FC = () => {
                           checked={formik.values.disclosureStatements}
                           onChange={formik.handleChange}
                           color="primary"
-                          aria-label="I acknowledge receipt of disclosure statements"
                         />
                       }
                       label="I acknowledge receipt of Traditional, Roth, and SEP IRA Account Agreement Disclosure Statements"
@@ -827,7 +940,6 @@ const EAccount: React.FC = () => {
                           checked={formik.values.electronicSignature}
                           onChange={formik.handleChange}
                           color="primary"
-                          aria-label="I consent to electronic signature and delivery"
                         />
                       }
                       label="I consent to electronic signature and electronic delivery of documents"
@@ -851,7 +963,7 @@ const EAccount: React.FC = () => {
                 </Alert>
               </Grid>
             </Grid>
-          </Box>
+          </>
         );
 
       default:
@@ -873,11 +985,17 @@ const EAccount: React.FC = () => {
                 Your IRA Application has been sent to Equity Trust Company. 
                 Your new IRA Account Number is <strong>{applicationNumber}</strong>.
               </Typography>
+              <Typography variant="body2" paragraph>
+                Activity ID: <strong>{activityId}</strong>
+              </Typography>
+              <Typography variant="body2" paragraph>
+                You'll receive an email with DocuSign documents to complete the process.
+              </Typography>
             </Grid>
             
             <Grid item xs={12} md={6}>
               <Typography variant="h5" gutterBottom>
-                You've opened your IRA retirement account
+                Next Steps
               </Typography>
               
               <List>
@@ -897,7 +1015,7 @@ const EAccount: React.FC = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary="Initiate a Rollover"
-                    secondary="Rollover a rollover from an old 401k and 403b"
+                    secondary="Rollover from an old 401k and 403b"
                   />
                 </ListItem>
                 
@@ -911,6 +1029,24 @@ const EAccount: React.FC = () => {
                   />
                 </ListItem>
               </List>
+
+              <Box sx={{ mt: 3 }}>
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  onClick={() => window.location.href = '/dashboard'}
+                  sx={{ mr: 2 }}
+                >
+                  Go to Dashboard
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  onClick={() => window.location.href = '/invest'}
+                >
+                  Start Investing
+                </Button>
+              </Box>
             </Grid>
           </Grid>
         </Paper>
@@ -949,33 +1085,45 @@ const EAccount: React.FC = () => {
           ))}
         </Stepper>
 
-        {/* Form Content */}
-        <Box sx={{ minHeight: 400 }}>
+        {/* Form - Wrap everything in one form */}
+        <Box 
+          component="form" 
+          onSubmit={formik.handleSubmit}
+          sx={{ minHeight: 400 }}
+        >
+          {/* Form Content */}
           {renderStepContent(activeStep)}
-        </Box>
 
-        {/* Navigation Buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-          <Button
-            disabled={activeStep === 0}
-            onClick={handleBack}
-            variant="outlined"
-            size="large"
-          >
-            Back
-          </Button>
-          
-          <Button
-            type="submit"
-            onClick={()=>formik.handleSubmit}
-            variant="contained"
-            size="large"
-            disabled={isSubmitting}
-            startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
-          >
-            {isSubmitting ? 'Submitting...' : 
-             activeStep === steps.length - 1 ? 'Submit IRA Application' : 'Next'}
-          </Button>
+          {/* Error Alert */}
+          {submitError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {submitError}
+            </Alert>
+          )}
+
+          {/* Navigation Buttons - Now inside the form */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+            <Button
+              disabled={activeStep === 0}
+              onClick={handleBack}
+              variant="outlined"
+              size="large"
+              type="button"
+            >
+              Back
+            </Button>
+            
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={isSubmitting}
+              startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+            >
+              {isSubmitting ? 'Submitting...' : 
+               activeStep === steps.length - 1 ? 'Submit IRA Application' : 'Next'}
+            </Button>
+          </Box>
         </Box>
 
         {/* Form Validation Error Alert */}

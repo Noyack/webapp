@@ -1,5 +1,5 @@
 import React, { useContext, useState, Suspense, lazy, FC, useEffect } from "react";
-import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
 import DesktopLayout from "./components/Layout/DesktopLayout";
 import AuthPage from "./pages/Auth/AuthPage";
 import useApiServices from "./hooks/useApiServices";
@@ -39,9 +39,10 @@ const ResponsiveLayout: FC<ResponsiveLayoutProps> = ({ isMobile, children }) => 
 };
 
 const App: FC = () => {
-  // Initialize API services with authentication
+  // Initialize API ssupportervices with authentication
   const { isInitialized, services, isAuthenticated, hasValidToken } = useApiServices();
-  const { userInfo, setUserInfo } = useContext(UserContext);
+  const { userInfo, setUserInfo, setSubs } = useContext(UserContext);
+  const { signOut } = useAuth()
   
   // State to track if user needs onboarding
   const [isNew, setIsNew] = useState<boolean>(true);
@@ -64,7 +65,11 @@ const App: FC = () => {
     try {
       setIsLoading(true);
       const user = await services.auth.getCurrentUser();
+      if(user === null) signOut()
       if (user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sub:any = await services.auth.getCurrentSub(user.id)
+        if(sub) setSubs(sub[0])
         setUserInfo(user);
         setIsNew(user.onboarding);
         setHasLoadedUser(true);
@@ -80,24 +85,24 @@ const App: FC = () => {
 
   // Check if user is new (needs onboarding) - only load once
   useEffect(() => {
-    checkUserStatus();
+     checkUserStatus();
   }, [isInitialized, isAuthenticated]);
 
   // Show loading while initializing APIs or checking user status
   // Only show loading spinner if we're authenticated but still loading user data
   if (isAuthenticated && (!isInitialized || isLoading)) {
     return <LoadingSpinner />;
-  }
+   }
 
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+	   <Suspense fallback={<LoadingSpinner />}>
       <>
         <SignedOut>
           <AuthPage isMobile={isMobile} />
         </SignedOut>
         
-        <SignedIn>
-          {((userInfo && isNew) || (isAuthenticated && !userInfo && !isLoading)) && (
+	 <SignedIn>
+	{((userInfo && isNew) || (isAuthenticated && !userInfo && !isLoading)) && (
             <Suspense fallback={<LoadingSpinner />}>
               <Creation isMobile={Boolean(isMobile)} />
             </Suspense>
@@ -111,10 +116,10 @@ const App: FC = () => {
                 </Suspense>
               </ResponsiveLayout>
             </ViewProvider>
-          )}
-        </SignedIn>
+	    )}
+	     </SignedIn>
       </>
-    </Suspense>
+      </Suspense>
   );
 };
 

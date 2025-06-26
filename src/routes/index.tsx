@@ -10,6 +10,7 @@ const Events = lazy(() => import('../pages/Events/Events'));
 const Invest = lazy(preloadComponent(() => import('../pages/Invest/Invest')));
 const IRAFunding = lazy(preloadComponent(() => import('../pages/IRAFunding/IRAFunding')));
 const Wallet = lazy(preloadComponent(() => import('../pages/Wallet/Wallet')));
+const Quiz = lazy(preloadComponent(() => import('../pages/Wealthview/WealthIQ')));
 const Library = lazy(() => import('../pages/Library/Library'));
 const NotFound = lazy(() => import('./404'));
 const Planning = lazy(preloadComponent(() => import('../pages/Planning/Planning')));
@@ -86,6 +87,14 @@ const AppRoutes: FC = () => {
         element={
           <Suspense fallback={<LoadingSpinner />}>
             <Wallet />
+          </Suspense>
+        } 
+      />
+      <Route 
+        path="/quiz" 
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <Quiz />
           </Suspense>
         } 
       />

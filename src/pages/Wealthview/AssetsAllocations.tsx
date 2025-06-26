@@ -24,16 +24,16 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
 
 // Asset Form Components
-import LiquidAssetForm from './asset-forms/LiquidAssetForm.tsx';
-import InvestmentAssetForm from './asset-forms/InvestmentAssetForm.tsx';
-import RetirementAssetForm from './asset-forms/RetirementAssetForm.tsx';
-import RealEstateAssetForm from './asset-forms/RealEstateAssetForm.tsx';
-import BusinessAssetForm from './asset-forms/BusinessAssetForm.tsx';
-import PersonalPropertyAssetForm from './asset-forms/PersonalPropertyAssetForm.tsx';
-import AssetAllocationForm from './asset-forms/AssetAllocationForm.tsx';
+import LiquidAssetForm from './asset-forms/LiquidAssetForm';
+import InvestmentAssetForm from './asset-forms/InvestmentAssetForm';
+import RetirementAssetForm from './asset-forms/RetirementAssetForm';
+import RealEstateAssetForm from './asset-forms/RealEstateAssetForm';
+import BusinessAssetForm from './asset-forms/BusinessAssetForm';
+import PersonalPropertyAssetForm from './asset-forms/PersonalPropertyAssetForm';
+import AssetAllocationForm from './asset-forms/AssetAllocationForm';
 
 // Import services
-import assetsService from '../../services/assets.service.ts';
+import assetsService from '../../services/assets.service';
 
 // Import shared types
 import { 
@@ -51,8 +51,8 @@ import {
   realEstateAssetTypes,
   businessAssetTypes,
   personalPropertyAssetTypes
-} from '../../types/index.ts';
-import { UserContext } from '../../context/UserContext.tsx';
+} from '../../types/index';
+import { UserContext } from '../../context/UserContext';
 
 
 // Tab Panel Component

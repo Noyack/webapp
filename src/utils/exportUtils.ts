@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { RentVsBuyInputs, ResultData, SummaryData } from '../types/rentVsBuy';

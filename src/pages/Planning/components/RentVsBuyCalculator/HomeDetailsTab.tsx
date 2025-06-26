@@ -23,17 +23,34 @@ interface HomeDetailsTabProps {
 
 const HomeDetailsTab: FC<HomeDetailsTabProps> = ({ inputs, onInputChange }) => {
   
-  const monthlyMortgage = calculateMonthlyMortgage(
+  // Helper function to handle number input with leading zero removal
+  const handleNumberInputChange = (value: string, field: keyof RentVsBuyInputs) => {
+    // Remove leading zeros but keep single 0 or empty string
+    let cleanValue = value.replace(/^0+/, '') || '0';
+    if (cleanValue === '0' && value.length > 1) {
+      cleanValue = '';
+    }
+    
+    const numericValue = cleanValue === '' ? 0 : Number(cleanValue);
+    onInputChange(field, numericValue);
+  };
+
+  // Display helper - show empty string if value is 0, otherwise show the value
+  const getDisplayValue = (value: number): string => {
+    return value === 0 ? '' : value.toString();
+  };
+
+  const monthlyMortgage = inputs.homePrice > 0 && inputs.interestRate > 0 ? calculateMonthlyMortgage(
     inputs.homePrice,
     inputs.downPaymentPercent,
     inputs.interestRate,
-    inputs.mortgageTerm
-  );
+    inputs.mortgageTerm || 30
+  ) : 0;
 
-  const pmiInfo = calculatePMI(inputs.homePrice, inputs.downPaymentPercent);
+  const pmiInfo = inputs.homePrice > 0 ? calculatePMI(inputs.homePrice, inputs.downPaymentPercent) : { monthlyPMI: 0, annualPMI: 0, pmiRequired: false };
   const propertyTaxRate = inputs.location.propertyTaxRate || 1.1;
-  const monthlyPropertyTax = (inputs.homePrice * (propertyTaxRate / 100)) / 12;
-  const monthlyInsurance = (inputs.homePrice * (inputs.homeInsuranceRate / 100)) / 12;
+  const monthlyPropertyTax = inputs.homePrice > 0 ? (inputs.homePrice * (propertyTaxRate / 100)) / 12 : 0;
+  const monthlyInsurance = inputs.homePrice > 0 && inputs.homeInsuranceRate > 0 ? (inputs.homePrice * (inputs.homeInsuranceRate / 100)) / 12 : 0;
   
   const totalMonthlyPayment = monthlyMortgage + 
     monthlyPropertyTax + 
@@ -42,8 +59,8 @@ const HomeDetailsTab: FC<HomeDetailsTabProps> = ({ inputs, onInputChange }) => {
     inputs.monthlyHOAFees + 
     inputs.monthlyAdditionalExpenses;
 
-  const monthlyIncome = inputs.annualIncome / 12;
-  const housingRatio = (totalMonthlyPayment / monthlyIncome) * 100;
+  const monthlyIncome = inputs.annualIncome > 0 ? inputs.annualIncome / 12 : 0;
+  const housingRatio = monthlyIncome > 0 ? (totalMonthlyPayment / monthlyIncome) * 100 : 0;
 
   return (
     <Grid container spacing={4}>
@@ -57,9 +74,13 @@ const HomeDetailsTab: FC<HomeDetailsTabProps> = ({ inputs, onInputChange }) => {
             </Typography>
             <FormControl fullWidth variant="outlined">
               <Select
-                value={inputs.mortgageTerm}
+                value={inputs.mortgageTerm || ''}
                 onChange={(e) => onInputChange('mortgageTerm', Number(e.target.value))}
+                displayEmpty
               >
+                <MenuItem value="" disabled>
+                  <em>Select mortgage term</em>
+                </MenuItem>
                 <MenuItem value={15}>15-year fixed</MenuItem>
                 <MenuItem value={20}>20-year fixed</MenuItem>
                 <MenuItem value={30}>30-year fixed</MenuItem>
@@ -104,73 +125,77 @@ const HomeDetailsTab: FC<HomeDetailsTabProps> = ({ inputs, onInputChange }) => {
           )}
           
           {/* Monthly Payment Breakdown */}
-          <Box className="mb-4 p-4 bg-blue-50 rounded">
-            <Typography variant="subtitle1" className="mb-3 text-blue-700">
-              Total Monthly Payment Breakdown
-            </Typography>
-            
-            <Box className="space-y-2">
-              <Box className="flex justify-between">
-                <Typography variant="body2">Principal & Interest:</Typography>
-                <Typography variant="body2" className="font-semibold">
-                  {formatCurrency(monthlyMortgage)}
-                </Typography>
-              </Box>
+          {inputs.homePrice > 0 && inputs.interestRate > 0 && inputs.mortgageTerm > 0 && (
+            <Box className="mb-4 p-4 bg-blue-50 rounded">
+              <Typography variant="subtitle1" className="mb-3 text-blue-700">
+                Total Monthly Payment Breakdown
+              </Typography>
               
-              <Box className="flex justify-between">
-                <Typography variant="body2">Property Tax:</Typography>
-                <Typography variant="body2" className="font-semibold">
-                  {formatCurrency(monthlyPropertyTax)}
-                </Typography>
-              </Box>
-              
-              <Box className="flex justify-between">
-                <Typography variant="body2">Home Insurance:</Typography>
-                <Typography variant="body2" className="font-semibold">
-                  {formatCurrency(monthlyInsurance)}
-                </Typography>
-              </Box>
-              
-              {pmiInfo.pmiRequired && (
+              <Box className="space-y-2">
                 <Box className="flex justify-between">
-                  <Typography variant="body2">PMI:</Typography>
-                  <Typography variant="body2" className="font-semibold text-yellow-600">
-                    {formatCurrency(pmiInfo.monthlyPMI)}
+                  <Typography variant="body2">Principal & Interest:</Typography>
+                  <Typography variant="body2" className="font-semibold">
+                    {formatCurrency(monthlyMortgage)}
                   </Typography>
                 </Box>
-              )}
-              
-              <Box className="flex justify-between">
-                <Typography variant="body2">HOA Fees:</Typography>
-                <Typography variant="body2" className="font-semibold">
-                  {formatCurrency(inputs.monthlyHOAFees)}
-                </Typography>
-              </Box>
-              
-              <Box className="flex justify-between">
-                <Typography variant="body2">Additional Expenses:</Typography>
-                <Typography variant="body2" className="font-semibold">
-                  {formatCurrency(inputs.monthlyAdditionalExpenses)}
-                </Typography>
-              </Box>
-              
-              <hr className="border-blue-200" />
-              
-              <Box className="flex justify-between">
-                <Typography variant="subtitle2" className="text-blue-700">Total Monthly:</Typography>
-                <Typography variant="subtitle2" className="font-bold text-blue-700">
-                  {formatCurrency(totalMonthlyPayment)}
-                </Typography>
-              </Box>
-              
-              <Box className="flex justify-between">
-                <Typography variant="body2">% of Income:</Typography>
-                <Typography variant="body2" className={`font-semibold ${housingRatio > 35 ? 'text-red-600' : housingRatio > 28 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {formatPercent(housingRatio)}
-                </Typography>
+                
+                <Box className="flex justify-between">
+                  <Typography variant="body2">Property Tax:</Typography>
+                  <Typography variant="body2" className="font-semibold">
+                    {formatCurrency(monthlyPropertyTax)}
+                  </Typography>
+                </Box>
+                
+                <Box className="flex justify-between">
+                  <Typography variant="body2">Home Insurance:</Typography>
+                  <Typography variant="body2" className="font-semibold">
+                    {formatCurrency(monthlyInsurance)}
+                  </Typography>
+                </Box>
+                
+                {pmiInfo.pmiRequired && (
+                  <Box className="flex justify-between">
+                    <Typography variant="body2">PMI:</Typography>
+                    <Typography variant="body2" className="font-semibold text-yellow-600">
+                      {formatCurrency(pmiInfo.monthlyPMI)}
+                    </Typography>
+                  </Box>
+                )}
+                
+                <Box className="flex justify-between">
+                  <Typography variant="body2">HOA Fees:</Typography>
+                  <Typography variant="body2" className="font-semibold">
+                    {formatCurrency(inputs.monthlyHOAFees)}
+                  </Typography>
+                </Box>
+                
+                <Box className="flex justify-between">
+                  <Typography variant="body2">Additional Expenses:</Typography>
+                  <Typography variant="body2" className="font-semibold">
+                    {formatCurrency(inputs.monthlyAdditionalExpenses)}
+                  </Typography>
+                </Box>
+                
+                <hr className="border-blue-200" />
+                
+                <Box className="flex justify-between">
+                  <Typography variant="subtitle2" className="text-blue-700">Total Monthly:</Typography>
+                  <Typography variant="subtitle2" className="font-bold text-blue-700">
+                    {formatCurrency(totalMonthlyPayment)}
+                  </Typography>
+                </Box>
+                
+                {monthlyIncome > 0 && (
+                  <Box className="flex justify-between">
+                    <Typography variant="body2">% of Income:</Typography>
+                    <Typography variant="body2" className={`font-semibold ${housingRatio > 35 ? 'text-red-600' : housingRatio > 28 ? 'text-yellow-600' : 'text-green-600'}`}>
+                      {formatPercent(housingRatio)}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             </Box>
-          </Box>
+          )}
 
           {/* Affordability Alert */}
           {housingRatio > 35 && (
@@ -206,7 +231,7 @@ const HomeDetailsTab: FC<HomeDetailsTabProps> = ({ inputs, onInputChange }) => {
               max={1.5}
             />
             <Typography variant="body2" className="text-gray-600">
-              Annual Amount: {formatCurrency(inputs.homePrice * (inputs.homeInsuranceRate / 100))}
+              Annual Amount: {inputs.homePrice > 0 ? formatCurrency(inputs.homePrice * (inputs.homeInsuranceRate / 100)) : '$0'}
             </Typography>
           </Box>
           
@@ -215,13 +240,17 @@ const HomeDetailsTab: FC<HomeDetailsTabProps> = ({ inputs, onInputChange }) => {
               Monthly HOA/Condo Fees
             </Typography>
             <TextField
-              value={inputs.monthlyHOAFees}
-              onChange={(e) => onInputChange('monthlyHOAFees', Number(e.target.value))}
+              value={getDisplayValue(inputs.monthlyHOAFees)}
+              onChange={(e) => handleNumberInputChange(e.target.value, 'monthlyHOAFees')}
               type="number"
               variant="outlined"
               fullWidth
               InputProps={{
                 startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              }}
+              inputProps={{
+                min: 0,
+                step: 10
               }}
             />
           </Box>
@@ -241,10 +270,10 @@ const HomeDetailsTab: FC<HomeDetailsTabProps> = ({ inputs, onInputChange }) => {
               max={3}
             />
             <Typography variant="body2" className="text-gray-600">
-              Annual Amount: {formatCurrency(inputs.homePrice * (inputs.annualMaintenancePercent / 100))}
+              Annual Amount: {inputs.homePrice > 0 ? formatCurrency(inputs.homePrice * (inputs.annualMaintenancePercent / 100)) : '$0'}
             </Typography>
             <Typography variant="body2" className="text-gray-500 text-sm mt-1">
-              Monthly equivalent: {formatCurrency((inputs.homePrice * (inputs.annualMaintenancePercent / 100)) / 12)}
+              Monthly equivalent: {inputs.homePrice > 0 ? formatCurrency((inputs.homePrice * (inputs.annualMaintenancePercent / 100)) / 12) : '$0'}
             </Typography>
           </Box>
           
@@ -253,13 +282,17 @@ const HomeDetailsTab: FC<HomeDetailsTabProps> = ({ inputs, onInputChange }) => {
               Monthly Additional Expenses
             </Typography>
             <TextField
-              value={inputs.monthlyAdditionalExpenses}
-              onChange={(e) => onInputChange('monthlyAdditionalExpenses', Number(e.target.value))}
+              value={getDisplayValue(inputs.monthlyAdditionalExpenses)}
+              onChange={(e) => handleNumberInputChange(e.target.value, 'monthlyAdditionalExpenses')}
               type="number"
               variant="outlined"
               fullWidth
               InputProps={{
                 startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              }}
+              inputProps={{
+                min: 0,
+                step: 10
               }}
             />
             <Typography variant="body2" className="text-gray-600 mt-1">
@@ -296,7 +329,7 @@ const HomeDetailsTab: FC<HomeDetailsTabProps> = ({ inputs, onInputChange }) => {
                 </Typography>
                 <Typography variant="body2" className="text-gray-600">
                   Based on {inputs.location.state || 'national average'}. 
-                  Annual amount: {formatCurrency(inputs.homePrice * (propertyTaxRate / 100))}
+                  Annual amount: {inputs.homePrice > 0 ? formatCurrency(inputs.homePrice * (propertyTaxRate / 100)) : '$0'}
                 </Typography>
               </Box>
             </Box>
@@ -307,4 +340,4 @@ const HomeDetailsTab: FC<HomeDetailsTabProps> = ({ inputs, onInputChange }) => {
   );
 };
 
-export default HomeDetailsTab; 
+export default HomeDetailsTab;

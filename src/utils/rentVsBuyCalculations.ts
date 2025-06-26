@@ -47,42 +47,44 @@ export const calculatePMI = (homePrice: number, downPaymentPercent: number): { m
   }
   
   const loanAmount = homePrice * (1 - downPaymentPercent / 100);
-  // PMI typically ranges from 0.2% to 2% of loan amount annually
-  // Use 0.5% as standard rate for down payments 10-19%, 0.85% for 5-9%, 1.15% for 3-4%
-  let pmiRate = 0.005; // 0.5%
+  // Updated PMI rates based on 2025 standards
+  // Use 0.4% as standard rate for down payments 15-19%, 0.7% for 10-14%, 0.95% for 5-9%, 1.15% for 3-4%
+  let pmiRate = 0.004; // 0.4%
   
   if (downPaymentPercent < 5) {
     pmiRate = 0.0115; // 1.15%
   } else if (downPaymentPercent < 10) {
-    pmiRate = 0.0085; // 0.85%
+    pmiRate = 0.0095; // 0.95%
+  } else if (downPaymentPercent < 15) {
+    pmiRate = 0.007; // 0.7%
   }
   
   const annualPMI = loanAmount * pmiRate;
-  const monthlyPMI = annualPMI / 12;
+  const monthlyPMI = parseFloat((annualPMI / 12).toFixed(2));
   
-  return { monthlyPMI, annualPMI, pmiRequired: true };
+  return { monthlyPMI, annualPMI: parseFloat(annualPMI.toFixed(2)), pmiRequired: true };
 };
 
-// Get federal tax bracket based on income and filing status
+// Get federal tax bracket based on income and filing status (2025 Tax Year)
 function getFederalTaxBracket(income: number, filingStatus: 'single' | 'married'): number {
   const brackets = filingStatus === 'single' 
     ? [
-        { min: 0, max: 11000, rate: 0.10 },
-        { min: 11000, max: 44725, rate: 0.12 },
-        { min: 44725, max: 95375, rate: 0.22 },
-        { min: 95375, max: 182050, rate: 0.24 },
-        { min: 182050, max: 231250, rate: 0.32 },
-        { min: 231250, max: 578125, rate: 0.35 },
-        { min: 578125, max: Infinity, rate: 0.37 }
+        { min: 0, max: 11925, rate: 0.10 },
+        { min: 11925, max: 48475, rate: 0.12 },
+        { min: 48475, max: 103350, rate: 0.22 },
+        { min: 103350, max: 197300, rate: 0.24 },
+        { min: 197300, max: 250525, rate: 0.32 },
+        { min: 250525, max: 626350, rate: 0.35 },
+        { min: 626350, max: Infinity, rate: 0.37 }
       ]
     : [
-        { min: 0, max: 22000, rate: 0.10 },
-        { min: 22000, max: 89450, rate: 0.12 },
-        { min: 89450, max: 190750, rate: 0.22 },
-        { min: 190750, max: 364200, rate: 0.24 },
-        { min: 364200, max: 462500, rate: 0.32 },
-        { min: 462500, max: 693750, rate: 0.35 },
-        { min: 693750, max: Infinity, rate: 0.37 }
+        { min: 0, max: 23850, rate: 0.10 },
+        { min: 23850, max: 96950, rate: 0.12 },
+        { min: 96950, max: 206700, rate: 0.22 },
+        { min: 206700, max: 394600, rate: 0.24 },
+        { min: 394600, max: 501050, rate: 0.32 },
+        { min: 501050, max: 751600, rate: 0.35 },
+        { min: 751600, max: Infinity, rate: 0.37 }
       ];
 
   const bracket = brackets.find(b => income >= b.min && income < b.max);
@@ -96,14 +98,16 @@ export const calculateTaxBenefits = (
   interestRate: number,
   propertyTaxRate: number,
   annualIncome: number,
-  maritalStatus: 'single' | 'married'
+  maritalStatus: 'single' | 'married',
+  mortgageBalance: number = 0 // Use this for actual interest calculation
 ): { annualTaxSavings: number; marginalTaxRate: number; itemizedDeductions: number; standardDeduction: number } => {
-  const loanAmount = homePrice * (1 - downPaymentPercent / 100);
-  const annualInterest = loanAmount * (interestRate / 100);
+  // Use actual mortgage balance for interest calculation, or calculate initial if not provided
+  const actualMortgageBalance = mortgageBalance || (homePrice * (1 - downPaymentPercent / 100));
+  const annualInterest = actualMortgageBalance * (interestRate / 100);
   const annualPropertyTax = homePrice * (propertyTaxRate / 100);
   
-  // Standard deduction for 2024
-  const standardDeduction = maritalStatus === 'married' ? 29200 : 14600;
+  // 2025 Standard deductions
+  const standardDeduction = maritalStatus === 'married' ? 30000 : 15000;
   
   // SALT cap (State And Local Tax deduction cap)
   const saltCap = 10000;
@@ -123,9 +127,9 @@ export const calculateTaxBenefits = (
   }
   
   return { 
-    annualTaxSavings, 
+    annualTaxSavings: parseFloat(annualTaxSavings.toFixed(2)), 
     marginalTaxRate, 
-    itemizedDeductions, 
+    itemizedDeductions: parseFloat(itemizedDeductions.toFixed(2)), 
     standardDeduction 
   };
 };
@@ -221,31 +225,25 @@ export const calculateRentVsBuy = (inputs: RentVsBuyInputs): { results: ResultDa
   const propertyTaxRate = location.propertyTaxRate || 1.1; // Default 1.1% if not provided
   const annualPropertyTax = (homePrice * propertyTaxRate) / 100;
   
-  // Calculate homeowner's insurance (annual)
+  // Calculate homeowner's insurance (annual) - NOT subject to inflation
   const annualHomeInsurance = (homePrice * homeInsuranceRate) / 100;
   
-  // Annual maintenance (adjusted for cost of living)
-  const annualMaintenance = (homePrice * annualMaintenancePercent) / 100 * costOfLivingAdjustment;
-  
-  // Calculate tax benefits
-  const taxBenefits = calculateTaxBenefits(
-    homePrice, downPaymentPercent, interestRate, 
-    propertyTaxRate, annualIncome, maritalStatus
-  );
-  
-  // Buying closing costs (estimated at 3-5% of home price, adjusted for location)
+  // Buying closing costs (estimated at 3-5% of home price, adjusted for location) - NOT subject to inflation
   const buyingClosingCosts = homePrice * 0.04 * costOfLivingAdjustment; // 4% estimate with location adjustment
   
-  // Initialize results array
+  // Initialize results array and tracking variables
   const resultsData: ResultData[] = [];
+  let totalTaxSavingsAccumulated = 0; // Track actual total tax savings
   
   // Track the mortgage balance for equity calculations
   let mortgageBalance = loanAmount;
   
-  // Investment account for the difference between renting and buying upfront costs
-  let investmentAccount = downPaymentAmount + buyingClosingCosts;
+  // FIXED: Investment account should ONLY track monthly differences, not down payment
+  // Both scenarios start with same cash position - homeowner puts down payment into house,
+  // renter keeps cash but doesn't get to "invest" the down payment as that's unfair comparison
+  let investmentAccount = 0; // Start at zero, only add monthly differences
   
-  // Track cumulative costs for both scenarios
+  // Track cumulative costs for both scenarios  
   let cumulativeBuyingCost = buyingClosingCosts + downPaymentAmount;
   let cumulativeRentingCost = 0;
   
@@ -255,7 +253,7 @@ export const calculateRentVsBuy = (inputs: RentVsBuyInputs): { results: ResultDa
   // Current monthly rent (will increase over time, adjusted for location)
   let currentMonthlyRent = monthlyRent;
   
-  // Track when PMI is removed (when loan balance reaches 78% of original home value)
+  // Track when PMI is removed (when loan balance reaches 78% of original home value OR current home value)
   let pmiRemoved = false;
 
   // For each year in the time horizon, calculate costs and equity
@@ -265,7 +263,7 @@ export const calculateRentVsBuy = (inputs: RentVsBuyInputs): { results: ResultDa
     // Annual mortgage payment (P&I)
     const annualMortgagePayment = monthlyMortgagePayment * 12;
     
-    // Recalculate mortgage balance after year's payments
+    // Calculate actual interest paid this year (decreases over time)
     const interestPaid = mortgageBalance * (interestRate / 100);
     const principalPaid = annualMortgagePayment - interestPaid;
     mortgageBalance = Math.max(0, mortgageBalance - principalPaid);
@@ -273,23 +271,42 @@ export const calculateRentVsBuy = (inputs: RentVsBuyInputs): { results: ResultDa
     // Update home value with appreciation
     currentHomeValue *= (1 + annualHomeValueIncrease / 100);
     
-    // Check if PMI should be removed (when balance reaches 78% of original home value)
-    if (!pmiRemoved && mortgageBalance <= homePrice * 0.78) {
+    // Debug: Verify home value calculation for test case
+    // For $1M at 3% over 20 years should be $1,806,111
+    // console.log(`Year ${year}: Home value = ${currentHomeValue.toFixed(2)}`);
+    
+    // Check if PMI should be removed (when balance reaches 78% of EITHER original OR current home value)
+    if (!pmiRemoved && (mortgageBalance <= homePrice * 0.78 || mortgageBalance <= currentHomeValue * 0.78)) {
       pmiRemoved = true;
     }
     
     // Calculate PMI for this year
     const currentYearPMI = (pmiRemoved || !pmiInfo.pmiRequired) ? 0 : pmiInfo.annualPMI;
     
-    // Calculate annual buying costs (with location adjustments)
+    // FIXED: Apply inflation to maintenance costs based on CURRENT home value
+    const currentYearMaintenance = (currentHomeValue * annualMaintenancePercent) / 100 * costOfLivingAdjustment * Math.pow(1 + annualInflation / 100, year - 1);
+    
+    // Apply inflation to additional expenses
+    const currentYearAdditionalExpenses = (monthlyAdditionalExpenses * 12 * costOfLivingAdjustment) * Math.pow(1 + annualInflation / 100, year - 1);
+    
+    // Calculate tax benefits using actual interest paid this year
+    const taxBenefits = calculateTaxBenefits(
+      homePrice, downPaymentPercent, interestRate, 
+      propertyTaxRate, annualIncome, maritalStatus, mortgageBalance
+    );
+    
+    // Accumulate actual tax savings
+    totalTaxSavingsAccumulated += taxBenefits.annualTaxSavings;
+    
+    // Calculate annual buying costs (with location adjustments and inflation where appropriate)
     const annualBuyingCosts = 
       annualMortgagePayment +                           // Mortgage P&I
       annualPropertyTax +                               // Property tax
-      annualHomeInsurance +                             // Home insurance
+      annualHomeInsurance +                             // Home insurance (NOT inflated)
       currentYearPMI +                                  // PMI (if applicable)
-      (monthlyHOAFees * 12 * costOfLivingAdjustment) +  // HOA fees (location adjusted)
-      annualMaintenance +                               // Maintenance (already location adjusted)
-      (monthlyAdditionalExpenses * 12 * costOfLivingAdjustment) - // Additional expenses (location adjusted)
+      (monthlyHOAFees * 12 * costOfLivingAdjustment) +  // HOA fees (NOT inflated per your request)
+      currentYearMaintenance +                          // Maintenance (inflation applied)
+      currentYearAdditionalExpenses -                   // Additional expenses (inflation applied)
       taxBenefits.annualTaxSavings;                     // Minus tax savings
     
     cumulativeBuyingCost += annualBuyingCosts;
@@ -302,64 +319,66 @@ export const calculateRentVsBuy = (inputs: RentVsBuyInputs): { results: ResultDa
     
     // RENTING SCENARIO
     
-    // Calculate annual renting costs (renter's insurance adjusted for location)
-    const annualRentingCosts = (currentMonthlyRent * 12) + (monthlyRentersInsurance * 12 * costOfLivingAdjustment);
+    // FIXED: Calculate annual renting costs (renter's insurance is completely flat - no adjustments)
+    const annualRenterInsurance = monthlyRentersInsurance * 12; // Flat $360/year, no location adjustment
+    const annualRentingCosts = (currentMonthlyRent * 12) + annualRenterInsurance;
     cumulativeRentingCost += annualRentingCosts;
     
-    // Update investment account with the difference in upfront costs
-    if (year === 1) {
-      // In the first year, we invest the down payment and closing costs
-      investmentAccount = downPaymentAmount + buyingClosingCosts;
-    }
-    
-    // Add monthly investment (difference between buying and renting costs)
+    // FIXED: Investment logic - renter invests ONLY the monthly difference
+    // This represents the cash flow advantage of renting vs buying each month
     const monthlyDifference = (annualBuyingCosts - annualRentingCosts) / 12;
-    if (monthlyDifference < 0) {
-      // If renting costs more, add the difference to investment account monthly
-      investmentAccount += Math.abs(monthlyDifference) * 12;
+    if (monthlyDifference > 0) {
+      // If buying costs more monthly, renter can invest that difference
+      investmentAccount += monthlyDifference * 12;
+    }
+    // Note: If renting costs more, renter has negative cash flow advantage (no additional investment)
+    
+    // Grow investment account with returns (only if there's something to grow)
+    if (investmentAccount > 0) {
+      investmentAccount *= (1 + annualReturnOnSavings / 100);
     }
     
-    // Grow investment account with returns
-    investmentAccount *= (1 + annualReturnOnSavings / 100);
-    
-    // Update rent for next year (may vary by location's rental market)
+    // Update rent for next year (apply ONLY rent increase, not inflation)
     currentMonthlyRent *= (1 + annualRentIncrease / 100);
     
-    // Store results for this year
+    // Store results for this year (round to 2 decimal places)
     resultsData.push({
       year,
-      buyingCost: cumulativeBuyingCost,
-      rentingCost: cumulativeRentingCost,
-      buyingEquity: currentEquity,
-      buyingNetCost: netBuyingCost
+      buyingCost: parseFloat(cumulativeBuyingCost.toFixed(2)),
+      rentingCost: parseFloat(cumulativeRentingCost.toFixed(2)),
+      buyingEquity: parseFloat(currentEquity.toFixed(2)),
+      buyingNetCost: parseFloat(netBuyingCost.toFixed(2))
     });
   }
 
   // Calculate final values
-  const finalHomeValue = currentHomeValue;
-  const finalEquity = finalHomeValue - mortgageBalance;
-  const finalNetBuyingCost = cumulativeBuyingCost - finalEquity;
+  const finalHomeValue = parseFloat(currentHomeValue.toFixed(2));
+  const finalEquity = parseFloat((finalHomeValue - mortgageBalance).toFixed(2));
   
-  // Add selling costs to final net buying cost (adjusted for location)
-  const finalNetBuyingCostWithSelling = finalNetBuyingCost + (finalHomeValue * 0.09 * costOfLivingAdjustment); // 9% selling costs with location adjustment
+  // Add selling costs to final net buying cost (adjusted for location) - 6% is more realistic than 9%
+  const sellingCosts = finalHomeValue * 0.06 * costOfLivingAdjustment;
+  const finalNetBuyingCost = parseFloat((cumulativeBuyingCost - finalEquity + sellingCosts).toFixed(2));
   
-  // Find break-even year (when net buying cost equals renting cost)
+  // Find break-even year (when net buying cost equals net renting cost)
   let breakEvenYear: number | null = null;
   for (const result of resultsData) {
-    if (result.buyingNetCost <= result.rentingCost) {
+    // Compare total costs fairly: buying total vs renting total + opportunity cost of not investing
+    const totalRentingCost = result.rentingCost; // Just renting costs, no investment offset
+    if (result.buyingNetCost <= totalRentingCost) {
       breakEvenYear = result.year;
       break;
     }
   }
 
-  // Create summary
+  // Create summary (all values rounded to 2 decimal places)
   const summary: SummaryData = {
-    totalBuyingCost: cumulativeBuyingCost,
-    totalRentingCost: cumulativeRentingCost,
+    totalBuyingCost: parseFloat(cumulativeBuyingCost.toFixed(2)),
+    totalRentingCost: parseFloat(cumulativeRentingCost.toFixed(2)),
     finalHomeValue,
     finalEquity,
-    netBuyingCost: finalNetBuyingCostWithSelling,
-    savingsAfterTimePeriod: investmentAccount,
+    netBuyingCost: finalNetBuyingCost,
+    savingsAfterTimePeriod: parseFloat(investmentAccount.toFixed(2)),
+    totalTaxSavings: parseFloat(totalTaxSavingsAccumulated.toFixed(2)), // Add actual total
   };
 
   return {
@@ -367,4 +386,4 @@ export const calculateRentVsBuy = (inputs: RentVsBuyInputs): { results: ResultDa
     summary,
     breakEvenYear
   };
-}; 
+};

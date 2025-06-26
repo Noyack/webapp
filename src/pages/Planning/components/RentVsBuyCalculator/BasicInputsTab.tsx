@@ -40,6 +40,23 @@ const BasicInputsTab: FC<BasicInputsTabProps> = ({ inputs, onInputChange }) => {
     });
   };
 
+  // Helper function to handle number input with leading zero removal
+  const handleNumberInputChange = (value: string, field: keyof RentVsBuyInputs) => {
+    // Remove leading zeros but keep single 0 or empty string
+    let cleanValue = value.replace(/^0+/, '') || '0';
+    if (cleanValue === '0' && value.length > 1) {
+      cleanValue = '';
+    }
+    
+    const numericValue = cleanValue === '' ? 0 : Number(cleanValue);
+    onInputChange(field, numericValue);
+  };
+
+  // Display helper - show empty string if value is 0, otherwise show the value
+  const getDisplayValue = (value: number): string => {
+    return value === 0 ? '' : value.toString();
+  };
+
   // Check if a specific field has errors
   const hasFieldError = (fieldName: string): boolean => {
     return validationErrors.some(error => error.toLowerCase().includes(fieldName.toLowerCase()));
@@ -158,8 +175,8 @@ const BasicInputsTab: FC<BasicInputsTabProps> = ({ inputs, onInputChange }) => {
                 Annual Household Income
               </Typography>
               <TextField
-                value={inputs.annualIncome}
-                onChange={(e) => onInputChange('annualIncome', Number(e.target.value) || 0)}
+                value={getDisplayValue(inputs.annualIncome)}
+                onChange={(e) => handleNumberInputChange(e.target.value, 'annualIncome')}
                 type="number"
                 variant="outlined"
                 fullWidth
@@ -187,8 +204,8 @@ const BasicInputsTab: FC<BasicInputsTabProps> = ({ inputs, onInputChange }) => {
                 Monthly Rent
               </Typography>
               <TextField
-                value={inputs.monthlyRent}
-                onChange={(e) => onInputChange('monthlyRent', Number(e.target.value) || 0)}
+                value={getDisplayValue(inputs.monthlyRent)}
+                onChange={(e) => handleNumberInputChange(e.target.value, 'monthlyRent')}
                 type="number"
                 variant="outlined"
                 fullWidth
@@ -210,8 +227,8 @@ const BasicInputsTab: FC<BasicInputsTabProps> = ({ inputs, onInputChange }) => {
                 Target Home Price
               </Typography>
               <TextField
-                value={inputs.homePrice}
-                onChange={(e) => onInputChange('homePrice', Number(e.target.value) || 0)}
+                value={getDisplayValue(inputs.homePrice)}
+                onChange={(e) => handleNumberInputChange(e.target.value, 'homePrice')}
                 type="number"
                 variant="outlined"
                 fullWidth
@@ -250,9 +267,9 @@ const BasicInputsTab: FC<BasicInputsTabProps> = ({ inputs, onInputChange }) => {
               />
               <Box className="flex justify-between items-center mt-2">
                 <Typography variant="body2" className="text-gray-600">
-                  Down Payment Amount: {formatCurrency(inputs.homePrice * (inputs.downPaymentPercent / 100))}
+                  Down Payment Amount: {inputs.homePrice > 0 ? formatCurrency(inputs.homePrice * (inputs.downPaymentPercent / 100)) : '$0'}
                 </Typography>
-                {inputs.downPaymentPercent < 20 && (
+                {inputs.downPaymentPercent < 20 && inputs.downPaymentPercent > 0 && (
                   <Typography variant="body2" className="text-yellow-600 font-semibold">
                     PMI Required
                   </Typography>
@@ -262,7 +279,7 @@ const BasicInputsTab: FC<BasicInputsTabProps> = ({ inputs, onInputChange }) => {
             
             <Box className="mb-4">
               <Typography variant="subtitle1" gutterBottom>
-                How long do you plan to stay? ({inputs.timeHorizon} years)
+                How long do you plan to stay? ({inputs.timeHorizon} {inputs.timeHorizon === 1 ? 'year' : 'years'})
               </Typography>
               <Slider
                 value={inputs.timeHorizon}
@@ -281,9 +298,10 @@ const BasicInputsTab: FC<BasicInputsTabProps> = ({ inputs, onInputChange }) => {
                 max={35}
               />
               <Typography variant="body2" className="text-gray-600 mt-2">
-                {inputs.timeHorizon < 5 && "Short-term: Renting often more cost-effective"}
+                {inputs.timeHorizon < 5 && inputs.timeHorizon > 0 && "Short-term: Renting often more cost-effective"}
                 {inputs.timeHorizon >= 5 && inputs.timeHorizon < 10 && "Medium-term: Consider transaction costs"}
                 {inputs.timeHorizon >= 10 && "Long-term: Buying typically builds more wealth"}
+                {inputs.timeHorizon === 0 && "Please select your time horizon"}
               </Typography>
             </Box>
 
@@ -313,4 +331,4 @@ const BasicInputsTab: FC<BasicInputsTabProps> = ({ inputs, onInputChange }) => {
   );
 };
 
-export default BasicInputsTab; 
+export default BasicInputsTab;

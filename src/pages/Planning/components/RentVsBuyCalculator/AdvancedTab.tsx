@@ -36,7 +36,7 @@ const AdvancedTab: FC<AdvancedTabProps> = ({ inputs, onInputChange }) => {
               max={6}
             />
             <Typography variant="body2" className="text-gray-600">
-              Historical average: 2-3% annually. Affects the real value of money over time.
+              Historical average: 2-3% annually. Affects rent, maintenance, and other costs over time.
             </Typography>
           </Box>
           
@@ -56,7 +56,7 @@ const AdvancedTab: FC<AdvancedTabProps> = ({ inputs, onInputChange }) => {
             />
             <Typography variant="body2" className="text-gray-600">
               Conservative: 3-5%, Moderate: 6-8%, Aggressive: 9-12%. 
-              This affects the opportunity cost of your down payment.
+              This affects the opportunity cost of your down payment and monthly savings.
             </Typography>
           </Box>
         </Paper>
@@ -72,11 +72,32 @@ const AdvancedTab: FC<AdvancedTabProps> = ({ inputs, onInputChange }) => {
             </Typography>
             <Typography variant="body2" className="mb-3">
               <strong>Inflation:</strong> Reduces the purchasing power of money over time. 
-              Your future rent payments will be worth less in today's dollars.
+              Your future rent payments will be worth less in today's dollars, and maintenance costs will increase.
             </Typography>
             <Typography variant="body2" className="mb-3">
               <strong>Investment Returns:</strong> The opportunity cost of your down payment. 
               Money not spent on a down payment could be invested and earn returns.
+            </Typography>
+          </Box>
+
+          <Box className="mb-4">
+            <Typography variant="subtitle1" gutterBottom className="text-green-700">
+              Inflation Applied To:
+            </Typography>
+            <Typography variant="body2" className="mb-2">
+              ✅ Rent increases (compounds with base rent increase)
+            </Typography>
+            <Typography variant="body2" className="mb-2">
+              ✅ Maintenance costs
+            </Typography>
+            <Typography variant="body2" className="mb-2">
+              ✅ Additional monthly expenses
+            </Typography>
+            <Typography variant="body2" className="mb-3 text-gray-600">
+              ❌ Renter's insurance (stays flat)
+            </Typography>
+            <Typography variant="body2" className="mb-3 text-gray-600">
+              ❌ Home insurance, HOA fees, transaction costs
             </Typography>
           </Box>
           
@@ -106,4 +127,4 @@ const AdvancedTab: FC<AdvancedTabProps> = ({ inputs, onInputChange }) => {
   );
 };
 
-export default AdvancedTab; 
+export default AdvancedTab;

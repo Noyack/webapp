@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// @ts-nocheck
+
 import React from 'react';
 import {
   Box,

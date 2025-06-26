@@ -31,14 +31,12 @@ export const tokenManager = {
   getToken(): string | null {
     try {
       const token = localStorage.getItem(TOKEN_KEY);
-      
       // Check if token is expired
       if (token && this.isTokenExpired()) {
         this.clearToken();
         return null;
       }
-     
-      return token
+      return  token
     } catch (error) {
       console.error('Failed to get token:', error);
       return null;

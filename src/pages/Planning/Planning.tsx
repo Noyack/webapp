@@ -25,7 +25,7 @@ import LifestyleInflationCalculator from "./LifestyleInflationCalculator";
 import EmergencyFundCalculator from "./EmergencyFundCalculator";
 import CollegeSavingsCalculator from "./CollegeSavingsCalculator";
 import MortgageCalculator from "./MortgageCalculator";
-import FourOhOneKCalculator from "./FourOhOneKCalculator";
+import FourOhOneKCalculator from "./Four_OneKCalculator";
 // import CostOfOwnership from "./CostOfOwnership";
 
 interface TabPanelProps {
@@ -245,7 +245,7 @@ const Planning = () => {
           <LifestyleInflationCalculator />
         </CustomTabPanel>
         <CustomTabPanel value={activeTab} index={11}>
-          <WindfallOptimizer />
+          <WindfallOptimizer /> 
         </CustomTabPanel>
       </Paper>
     </div>
