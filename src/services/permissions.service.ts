@@ -1,5 +1,7 @@
 import { FeatureGate, Permission, PERMISSIONS, SubscriptionPlan } from "../types";
 
+const PLAN_HIERARCHY: readonly SubscriptionPlan[] = ["free", "community", "investor"] as const;
+
 export class PermissionService {
   private permissions: Permission[] = PERMISSIONS;
 
@@ -32,7 +34,7 @@ export class PermissionService {
       requiredPlans: permission.plans,
       upgradeMessage: isAllowed 
         ? undefined 
-        : this.getUpgradeMessage(userPlan, permission.plans)
+        : this.getUpgradeMessage(userPlan, permission.plans, feature, action)
     };
   }
 
@@ -47,12 +49,9 @@ export class PermissionService {
     if (!permission || permission.plans.length === 0) {
       return null;
     }
-
-    // Define plan hierarchy
-    const planHierarchy: SubscriptionPlan[] = ["free", "community", "investor"];
     
     // Find the lowest plan in hierarchy that has permission
-    for (const plan of planHierarchy) {
+    for (const plan of PLAN_HIERARCHY) {
       if (permission.plans.includes(plan)) {
         return plan;
       }
@@ -61,16 +60,60 @@ export class PermissionService {
     return null;
   }
 
-  private getUpgradeMessage(userPlan: SubscriptionPlan, requiredPlans: SubscriptionPlan[]): string {
-    const minPlan = this.getMinimumPlan("", "");
+  /**
+   * Get the hierarchy index of a plan (lower index = lower tier)
+   */
+  private getPlanHierarchyIndex(plan: SubscriptionPlan): number {
+    return PLAN_HIERARCHY.indexOf(plan);
+  }
+
+  /**
+   * Check if planA is higher tier than planB
+   */
+  isPlanHigherTier(planA: SubscriptionPlan, planB: SubscriptionPlan): boolean {
+    return this.getPlanHierarchyIndex(planA) > this.getPlanHierarchyIndex(planB);
+  }
+
+  private getUpgradeMessage(
+    userPlan: SubscriptionPlan, 
+    requiredPlans: SubscriptionPlan[],
+    feature: string,
+    action: string
+  ): string {
+    // Get the minimum required plan for this specific feature/action
+    const minPlan = this.getMinimumPlan(feature, action);
     
-    if (requiredPlans.includes("investor")) {
-      return "Upgrade to Investor plan to access this feature";
+    if (!minPlan) {
+      return "Upgrade your plan to access this feature";
     }
-    if (requiredPlans.includes("community")) {
-      return "Upgrade to Community plan or higher to access this feature";
+
+    // Create more specific upgrade messages based on the minimum required plan
+    switch (minPlan) {
+      case "investor":
+        return "Upgrade to Investor plan to access this feature";
+      case "community":
+        return "Upgrade to Community plan or higher to access this feature";
+      case "free":
+        // This shouldn't happen if they don't have permission, but just in case
+        return "This feature should be available on your current plan";
+      default:
+        return `Upgrade to ${minPlan} plan or higher to access this feature`;
     }
-    
-    return "Upgrade your plan to access this feature";
+  }
+
+  /**
+   * Get all plans that are higher tier than the current plan
+   */
+  getHigherTierPlans(currentPlan: SubscriptionPlan): SubscriptionPlan[] {
+    const currentIndex = this.getPlanHierarchyIndex(currentPlan);
+    return PLAN_HIERARCHY.slice(currentIndex + 1);
+  }
+
+  /**
+   * Get the next higher tier plan
+   */
+  getNextTierPlan(currentPlan: SubscriptionPlan): SubscriptionPlan | null {
+    const currentIndex = this.getPlanHierarchyIndex(currentPlan);
+    return PLAN_HIERARCHY[currentIndex + 1] || null;
   }
 }

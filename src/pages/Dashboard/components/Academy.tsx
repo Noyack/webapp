@@ -138,17 +138,17 @@ const Academy = ({ events, referralCode, fetching }: CommunityProps = {}) => {
 	<UpcomingEvents />
       </div>
       
-      <Box 
+      {/* <Box 
         minHeight={`200px`} 
         width={`100%`}
-        className="flex flex-wrap py-6 bg-white px-5 shadow-lg rounded-lg"
+        className="flex flex-wrap justify-center py-6 bg-white px-5 shadow-lg rounded-lg"
       >
-        <div className='flex flex-col gap-4'>
+        <div className='flex flex-col items-center text-center gap-4'>
           <Typography variant='h3' fontWeight={"medium"} fontSize={"24px"}>
             Invite your Friends!
           </Typography>
           <input 
-            className='border-1 p-4 rounded-xl' 
+            className='border-1 p-4 w-[100%] rounded-xl' 
             placeholder='https://noyack.randomlink.com'
             value={referralUrl}
             readOnly
@@ -165,7 +165,7 @@ const Academy = ({ events, referralCode, fetching }: CommunityProps = {}) => {
             Share
           </Button>
         </div>
-      </Box>
+      </Box> */}
     </Box>
   )
 }

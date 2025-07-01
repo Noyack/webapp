@@ -95,11 +95,6 @@ const Planning = () => {
         <Typography variant="subtitle1" className="text-gray-600">
           Tools to help you make informed financial decisions
         </Typography>
-        {!isMobile && (
-          <Typography variant="caption" className="text-gray-500 mt-1 block">
-            💡 Tip: Use Ctrl + ← → to navigate between calculators
-          </Typography>
-        )}
       </Box>
 
       <Paper elevation={1} className="w-full">
