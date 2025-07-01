@@ -119,7 +119,7 @@ const LifestyleInflationCalculator: FC = () => {
           Lifestyle Inflation Impact Calculator
         </Typography>
         
-        <Typography variant="body1" className="mb-6 text-center text-gray-600 max-w-3xl mx-auto">
+        <Typography variant="body1" className="mb-6 text-center text-gray-600">
           Discover how your spending automatically increases with income raises and the compound effect this has on your wealth building. 
           See the true cost of lifestyle inflation over time.
         </Typography>

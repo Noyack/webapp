@@ -1,30 +1,17 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+// src/pages/Planning/Four_OneKCalculator.tsx
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Typography,
   Card,
   CardContent,
   Grid,
-  TextField,
-  InputAdornment,
   Tabs,
   Tab,
-  Alert,
   LinearProgress,
   Button,
   ButtonGroup,
-  Tooltip,
   Chip,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  FormControlLabel,
-  Switch,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Slider
 } from '@mui/material';
 import {
   AccountBalance as AccountBalanceIcon,
@@ -37,14 +24,11 @@ import {
   Savings as SavingsIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { debounce } from 'lodash';
 import ExportButtons from '../../components/ExportButtons';
 import { GenericExportData } from '../../utils/exportUtils';
 import { 
   FourOhOneKData, 
   PRESET_SCENARIOS, 
-  CONTRIBUTION_LIMITS,
-  validateAndFormat,
   formatCurrency
 } from '../../utils/fourOhOneK';
 import { useEnhanced401kCalculations } from '../../hooks/useEnhanced401kCalculations';
@@ -56,14 +40,14 @@ import OptimizationTab from './components/401k/OptimizationTab';
 const Enhanced401kCalculator: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [data, setData] = useState<FourOhOneKData>({
-    currentAge: 30,
+    currentAge: 18, // Changed: Allow starting at 18 instead of 30
     retirementAge: 65,
-    annualIncome: 75000,
-    currentBalance: 25000,
-    monthlyContribution: 500,
-    contributionPercent: 8,
-    employerMatch: 50,
-    employerMatchLimit: 6,
+    annualIncome: 0, // Changed: Default to 0 instead of 75000
+    currentBalance: 0, // Changed: Default to 0 instead of 25000
+    monthlyContribution: 0, // Changed: Default to 0 instead of 500
+    contributionPercent: 0, // Changed: Default to 0 instead of 8
+    employerMatch: 0, // Changed: Default to 0 instead of 50
+    employerMatchLimit: 0, // Changed: Default to 0 instead of 6
     estimatedReturn: 7,
     totalFees: 1,
     includeInflation: true,
@@ -86,68 +70,101 @@ const Enhanced401kCalculator: React.FC = () => {
     recommendations
   } = useEnhanced401kCalculations(data);
 
-  // Performance optimization: debounce updates
-  const debouncedUpdateRef = useRef(
-    debounce((field: keyof FourOhOneKData, value: any) => {
-      updateData(field, value);
-    }, 300)
-  );
+  // REMOVED: debounced updates - now immediate
+  // Updated validation function
+  const validateInput = useCallback((field: keyof FourOhOneKData, value: number): number => {
+    switch (field) {
+      case 'currentAge':
+        // Changed: Allow 1-120, no minimum of 18
+        return Math.max(1, Math.min(120, Math.floor(value)));
+      
+      case 'retirementAge':
+        // Must be greater than current age, max 120
+        return Math.max(data.currentAge + 1, Math.min(120, Math.floor(value)));
+      
+      case 'annualIncome':
+      case 'currentBalance':
+      case 'monthlyContribution':
+      case 'socialSecurityEstimate':
+        // Changed: No negative numbers, allow 0
+        return Math.max(0, value);
+      
+      case 'contributionPercent':
+      case 'employerMatch':
+      case 'employerMatchLimit':
+      case 'rothPercentage':
+        // Percentage fields: 0-100
+        return Math.max(0, Math.min(100, value));
+      
+      case 'estimatedReturn':
+      case 'totalFees':
+      case 'inflationRate':
+      case 'incomeGrowthRate':
+        // Rate fields: 0-50 (reasonable range)
+        return Math.max(0, Math.min(50, value));
+      
+      default:
+        return value;
+    }
+  }, [data.currentAge]);
 
-  // Update data function with validation
+  // Update data function with immediate validation (NO DEBOUNCING)
   const updateData = useCallback((field: keyof FourOhOneKData, value: any) => {
     setData(prev => {
       const newData = { ...prev };
       
       // Validate and format based on field type
       if (typeof value === 'number') {
-        switch (field) {
-          case 'currentAge':
-          case 'retirementAge':
-            newData[field] = validateAndFormat(value, field === 'retirementAge' ? 'years' : 'age');
-            break;
-          case 'employerMatch':
-          case 'employerMatchLimit':
-          case 'estimatedReturn':
-          case 'totalFees':
-          case 'inflationRate':
-          case 'incomeGrowthRate':
-          case 'contributionPercent':
-          case 'rothPercentage':
-            newData[field] = validateAndFormat(value, 'percentage');
-            break;
-          case 'annualIncome':
-          case 'currentBalance':
-          case 'monthlyContribution':
-          case 'socialSecurityEstimate':
-            newData[field] = validateAndFormat(value, 'currency');
-            break;
-          default:
-            newData[field] = value;
+        // Apply immediate validation
+        const validatedValue = validateInput(field, value);
+        newData[field] = validatedValue;
+        
+        // Special case: if current age changes and is >= retirement age, adjust retirement age
+        if (field === 'currentAge' && validatedValue >= prev.retirementAge) {
+          newData.retirementAge = Math.min(120, validatedValue + 1);
+        }
+        
+        // Special case: if retirement age changes and is <= current age, adjust current age  
+        if (field === 'retirementAge' && validatedValue <= prev.currentAge) {
+          newData.currentAge = Math.max(1, validatedValue - 1);
+        }
+
+        // Auto-calculate dependent values
+        if (field === 'monthlyContribution' || field === 'annualIncome') {
+          if (newData.annualIncome > 0) {
+            newData.contributionPercent = (newData.monthlyContribution * 12) / newData.annualIncome * 100;
+          }
+        } else if (field === 'contributionPercent') {
+          if (newData.annualIncome > 0) {
+            newData.monthlyContribution = (newData.annualIncome * newData.contributionPercent / 100) / 12;
+          }
+        }
+        
+        // Auto-enable catch-up for 50+
+        if (field === 'currentAge' && newData.currentAge >= 50) {
+          newData.includeCatchUp = true;
         }
       } else {
         newData[field] = value;
       }
       
-      // Auto-calculate dependent values
-      if (field === 'monthlyContribution' || field === 'annualIncome') {
-        newData.contributionPercent = (newData.monthlyContribution * 12) / newData.annualIncome * 100;
-      } else if (field === 'contributionPercent') {
-        newData.monthlyContribution = (newData.annualIncome * newData.contributionPercent / 100) / 12;
-      }
-      
-      // Auto-enable catch-up for 50+
-      if (field === 'currentAge' && newData.currentAge >= 50) {
-        newData.includeCatchUp = true;
-      }
-      
       return newData;
     });
-  }, []);
+  }, [validateInput]);
 
-  // Debounced update for better performance
+  // CHANGED: Immediate update for better responsiveness
   const handleInputChange = useCallback((field: keyof FourOhOneKData, value: any) => {
-    debouncedUpdateRef.current(field, value);
-  }, []);
+    // For numeric inputs, ensure we handle edge cases
+    if (typeof value === 'number') {
+      // Handle NaN or invalid numbers
+      if (isNaN(value)) {
+        value = 0;
+      }
+    }
+    
+    // Apply validation and update immediately
+    updateData(field, value);
+  }, [updateData]);
 
   // Preset scenario handlers
   const applyPreset = useCallback((scenario: keyof typeof PRESET_SCENARIOS) => {
@@ -158,17 +175,12 @@ const Enhanced401kCalculator: React.FC = () => {
   }, [updateData]);
 
   // Accessibility: Announce important changes
-  const [announcement, setAnnouncement] = useState('');
-  
-  useEffect(() => {
-    const { finalBalance, contributionPercent } = calculations;
-    setAnnouncement(
-      `Updated projection: Final balance ${formatCurrency(finalBalance)} at ${contributionPercent.toFixed(1)}% contribution rate.`
-    );
-  }, [calculations.finalBalance, calculations.contributionPercent]);
+  const announcement = `Updated ${activeTab === 0 ? 'investment details' : 
+    activeTab === 1 ? 'analysis' : 
+    activeTab === 2 ? 'tax strategy' : 'optimization'}`;
 
   // Prepare enhanced export data
-  const prepareExportData = useCallback((): GenericExportData => {
+  const exportData: GenericExportData = useMemo(() => {
     const { finalBalance, totalContributions, totalEmployerMatch, totalGrowth, projections } = calculations;
     
     return {
@@ -219,11 +231,19 @@ const Enhanced401kCalculator: React.FC = () => {
         Enhanced 401(k) Calculator
       </Typography>
       
-      <Typography variant="body1" className="mb-6 text-center text-gray-600 max-w-3xl mx-auto">
-        Advanced 401(k) planning with catch-up contributions, tax strategies, Social Security integration, and national benchmarks.
+      <Typography variant="h6" className="mb-6 text-center text-gray-600 ">
+        Plan your 401(k) contributions, maximize employer matching, and project your retirement savings.
       </Typography>
 
-      {/* Quick Preset Scenarios */}
+      {/* Export Section */}
+      <Box className="mb-6 text-center">
+        <ExportButtons 
+          data={exportData}
+          // filename="enhanced-401k-analysis"
+        />
+      </Box>
+
+      {/* Quick Preset Scenarios - KEEPING ORIGINAL DESIGN */}
       <Card sx={{ mb: 3, bgcolor: '#f8fafc' }}>
         <CardContent>
           <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -256,7 +276,7 @@ const Enhanced401kCalculator: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Enhanced Savings Overview */}
+      {/* Enhanced Savings Overview - KEEPING ORIGINAL DESIGN */}
       <Card sx={{ mb: 3, bgcolor: `${savingsAssessment.color}.50`, border: '1px solid', borderColor: `${savingsAssessment.color}.main` }}>
         <CardContent>
           <Grid container spacing={3} alignItems="center">
@@ -293,7 +313,7 @@ const Enhanced401kCalculator: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Enhanced Tabs */}
+      {/* Enhanced Tabs - KEEPING ORIGINAL DESIGN */}
       <Card>
         <Tabs 
           value={activeTab} 
@@ -392,56 +412,18 @@ const Enhanced401kCalculator: React.FC = () => {
             aria-labelledby="tab-optimization"
           >
             {activeTab === 3 && (
-              <OptimizationTab 
-                data={data}
-                calculations={calculations}
-                retirementIncome={retirementIncome}
-                recommendations={recommendations}
-              />
+              // <OptimizationTab 
+              //   data={data}
+              //   calculations={calculations}
+              //   retirementIncome={retirementIncome}
+              //   savingsAssessment={savingsAssessment}
+              //   recommendations={recommendations}
+              //   updateData={updateData}
+              // />
+              <Typography textAlign={"center"} fontSize={"24px"} fontWeight={"bold"}>Coming Soon</Typography>
             )}
           </div>
         </CardContent>
-
-        {/* Enhanced Export Section */}
-        <Box sx={{ p: 3, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'grey.50' }}>
-          <Typography variant="h6" gutterBottom textAlign="center">
-            📊 Export Your Enhanced 401(k) Analysis
-          </Typography>
-          <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 2 }}>
-            Download comprehensive projections, tax strategies, optimization recommendations, and national comparisons
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-            <ExportButtons data={prepareExportData()} />
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={() => {
-                setData({
-                  currentAge: 30,
-                  retirementAge: 65,
-                  annualIncome: 75000,
-                  currentBalance: 25000,
-                  monthlyContribution: 500,
-                  contributionPercent: 8,
-                  employerMatch: 50,
-                  employerMatchLimit: 6,
-                  estimatedReturn: 7,
-                  totalFees: 1,
-                  includeInflation: true,
-                  inflationRate: 3,
-                  incomeGrowthRate: 3,
-                  includeCatchUp: false,
-                  accountType: 'traditional',
-                  rothPercentage: 0,
-                  socialSecurityEstimate: 2000,
-                  riskProfile: 'moderate'
-                });
-              }}
-            >
-              Reset to Defaults
-            </Button>
-          </Box>
-        </Box>
       </Card>
     </Box>
   );

@@ -50,7 +50,7 @@ export default function MobileView({ children }: DesktopLayoutProps) {
       ></div>
       
       {/* Scrollable content */}
-      <div className="h-full overflow-auto">
+      <div className="mainCont h-full overflow-auto">
         <main className="px-5 ">
           <div className="max-w-7xl mx-auto flex flex-col gap-10 pb-4">
             <div className="search-input-container">

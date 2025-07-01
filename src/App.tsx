@@ -7,6 +7,7 @@ import { UserContext } from "./context/UserContext";
 import { ViewProvider } from "./Provider/ViewProvider";
 import MobileView from "./components/Layout/MobileView";
 import { useMediaQuery, useTheme } from "@mui/material";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Lazy load components
 const AppRoutes = lazy(() => import("./routes"));
@@ -112,6 +113,7 @@ const App: FC = () => {
             <ViewProvider>
               <ResponsiveLayout isMobile={isMobile}>
                 <Suspense fallback={<LoadingSpinner />}>
+                <ScrollToTop />
                   <AppRoutes />
                 </Suspense>
               </ResponsiveLayout>

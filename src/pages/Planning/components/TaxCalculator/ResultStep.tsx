@@ -51,31 +51,52 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
   onCalculate 
 }) => {
   
-  // Prepare export data
+  // Prepare export data - FIXED VERSION
   const prepareExportData = (): GenericExportData => {
     if (!results) return { calculatorName: 'Tax Optimization Calculator', inputs: {}, keyMetrics: [], recommendations: [] };
     
+    // Helper function to get income by type
+    const getIncomeByType = (type: string): number => {
+      return userData.incomeSources
+        .filter(source => source.type === type)
+        .reduce((sum, source) => sum + source.amount, 0);
+    };
+
+    // Calculate total income
+    const totalIncome = userData.incomeSources.reduce((sum, source) => sum + source.amount, 0);
+
     return {
       calculatorName: 'Tax Optimization Calculator',
       inputs: {
-        totalIncome: userData.income.w2Income + userData.income.selfEmploymentIncome + userData.income.businessIncome + userData.income.capitalGains + userData.income.dividends + userData.income.otherIncome,
-        w2Income: userData.income.w2Income,
-        selfEmploymentIncome: userData.income.selfEmploymentIncome,
-        businessIncome: userData.income.businessIncome,
-        capitalGains: userData.income.capitalGains,
-        dividends: userData.income.dividends,
-        otherIncome: userData.income.otherIncome,
+        totalIncome,
+        w2Income: getIncomeByType('primary') + getIncomeByType('secondary'),
+        selfEmploymentIncome: getIncomeByType('self-employment'),
+        businessIncome: getIncomeByType('business'),
+        capitalGains: getIncomeByType('capital-gains'),
+        dividends: getIncomeByType('dividends'),
+        rentalIncome: getIncomeByType('rental'),
+        interestIncome: getIncomeByType('interest'),
+        cryptoIncome: getIncomeByType('crypto'),
+        otherIncome: getIncomeByType('other'),
         filingStatus: userData.filingStatus,
         state: userData.state,
         dependents: userData.dependents,
-        age: userData.age,
-        retirement401k: userData.retirement['401k'],
-        retirementIRA: userData.retirement.ira,
-        retirementRothIRA: userData.retirement.rothIra,
-        retirementHSA: userData.retirement.hsa,
-        standardDeduction: userData.deductions.standardDeduction,
-        itemizedDeductions: userData.deductions.itemizedDeductions,
-        businessDeductions: userData.businessDeductions.total
+        useItemizedDeductions: userData.useItemizedDeductions,
+        totalDeductions: userData.deductions.reduce((sum, deduction) => sum + deduction.amount, 0),
+        // Tax-advantaged accounts
+        traditional401k: userData.taxAdvantaged['401k']?.contribution || 0,
+        traditionalIRA: userData.taxAdvantaged['ira-traditional']?.contribution || 0,
+        rothIRA: userData.taxAdvantaged['ira-roth']?.contribution || 0,
+        hsa: userData.taxAdvantaged['hsa']?.contribution || 0,
+        plan529: userData.taxAdvantaged['529']?.contribution || 0,
+        // Investment values
+        stocksValue: userData.stocksValue || 0,
+        cryptoValue: userData.cryptoValue || 0,
+        realEstateValue: userData.realEstateValue || 0,
+        // Other financial info
+        monthlyExpenses: userData.monthlyExpenses || 0,
+        emergencyFund: userData.emergencyFund || 0,
+        hasInvestments: userData.hasInvestments || false
       },
       keyMetrics: [
         { label: 'Total Income', value: `$${results.totalIncome.toLocaleString()}` },
@@ -162,7 +183,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
                   </Typography>
                   
                   <Typography variant="body2" className="flex justify-between my-1">
-                    <span>State Tax ({userData.state}):</span>
+                    <span>State Tax:</span>
                     <span className="font-medium">${Math.round(results.stateTax).toLocaleString()}</span>
                   </Typography>
                   
@@ -171,21 +192,12 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
                     <span className="font-medium">${Math.round(results.ficaTax).toLocaleString()}</span>
                   </Typography>
                   
-                  {results.selfEmploymentTax > 0 && (
-                    <Typography variant="body2" className="flex justify-between my-1">
-                      <span>Self-Employment Tax:</span>
-                      <span className="font-medium">${Math.round(results.selfEmploymentTax).toLocaleString()}</span>
-                    </Typography>
-                  )}
-                  
-                  <Divider className="my-2" />
-                  
-                  <Typography variant="subtitle1" className="flex justify-between mt-2 font-medium">
+                  <Typography variant="body2" className="flex justify-between my-1">
                     <span>Total Tax:</span>
-                    <span className="text-red-600">${Math.round(results.totalTax).toLocaleString()}</span>
+                    <span className="font-medium">${Math.round(results.totalTax).toLocaleString()}</span>
                   </Typography>
                   
-                  <Typography variant="body2" className="flex justify-between mt-1">
+                  <Typography variant="body2" className="flex justify-between my-1">
                     <span>Effective Tax Rate:</span>
                     <span className="font-medium">{results.effectiveTaxRate.toFixed(1)}%</span>
                   </Typography>
@@ -276,23 +288,26 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
                             { name: 'Federal Tax', value: Math.round(results.federalTax) },
                             { name: 'State Tax', value: Math.round(results.stateTax) },
                             { name: 'FICA Tax', value: Math.round(results.ficaTax) },
-                            ...(results.selfEmploymentTax > 0 ? [{ name: 'Self-Employment Tax', value: Math.round(results.selfEmploymentTax) }] : []),
+                            ...(results.selfEmploymentTax > 0 ? [{ name: 'Self-Employment Tax', value: Math.round(results.selfEmploymentTax) }] : [])
                           ]}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
-                          nameKey="name"
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                         >
-                          <Cell fill="#0088FE" />
-                          <Cell fill="#00C49F" />
-                          <Cell fill="#FFBB28" />
-                          <Cell fill="#FF8042" />
+                          {[
+                            { name: 'Federal Tax', value: Math.round(results.federalTax) },
+                            { name: 'State Tax', value: Math.round(results.stateTax) },
+                            { name: 'FICA Tax', value: Math.round(results.ficaTax) },
+                            ...(results.selfEmploymentTax > 0 ? [{ name: 'Self-Employment Tax', value: Math.round(results.selfEmploymentTax) }] : [])
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={['#0088FE', '#00C49F', '#FFBB28', '#FF8042'][index % 4]} />
+                          ))}
                         </Pie>
-                        <RechartsTooltip formatter={(value: any) => `${value.toLocaleString()}`} />
+                        <RechartsTooltip />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -303,26 +318,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" className="mb-4">Federal Tax Brackets</Typography>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={results.taxByBracket}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="bracket" />
-                        <YAxis tickFormatter={(value) => `${value.toLocaleString()}`} />
-                        <RechartsTooltip formatter={(value: any) => `${value.toLocaleString()}`} />
-                        <Bar dataKey="amount" fill="#8884d8" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" className="mb-4">30-Year Projection: Current vs. Optimized Strategy</Typography>
+                  <Typography variant="h6" className="mb-4">30-Year Projection: Current vs Optimized Strategy</Typography>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={results.projectedSavings}>

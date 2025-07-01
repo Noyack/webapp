@@ -108,11 +108,19 @@ const CollegeSavingsCalculator: React.FC = () => {
     'community': { avgCost: 6500, label: 'Community College' }
   };
 
+  // Helper function to format currency with exactly 2 decimal places
+  const formatCurrency = (amount: number): string => {
+    return amount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
   // Calculations
   const projectedTuition = data.currentTuition * Math.pow(1 + data.educationInflationRate / 100, data.yearsToCollege);
   const totalCollegeCost = projectedTuition * data.collegeDuration;
   const totalCollegeCostWithExtras = totalCollegeCost * 1.3; // Add 30% for room, board, books, etc.
-  
+
   // 529 Plan calculations
   const futureBalance = data.currentBalance * Math.pow(1 + data.expectedReturn / 100, data.yearsToCollege) +
     (data.monthlyContribution * 12) * ((Math.pow(1 + data.expectedReturn / 100, data.yearsToCollege) - 1) / (data.expectedReturn / 100));
@@ -187,8 +195,9 @@ const CollegeSavingsCalculator: React.FC = () => {
         College Savings Calculator
       </Typography>
       
-      <Typography variant="body1" className="mb-6 text-center text-gray-600 max-w-3xl mx-auto">
-        Plan for your child's education with 529 plans, tax benefits, and comprehensive savings strategies.
+      {/* FIXED: Centered description text */}
+      <Typography variant="body1" className="mb-6 text-center text-gray-600">
+        Plan for your child's education with 529 plans, tax benefits, and comprehensive strategies.
       </Typography>
 
       {/* Funding Status Overview */}
@@ -212,7 +221,8 @@ const CollegeSavingsCalculator: React.FC = () => {
               <Typography variant="body2" color="text.secondary">{fundingStatus.message}</Typography>
             </Grid>
             <Grid item xs={12} md={3} textAlign="center">
-              <Typography variant="h5" fontWeight="bold">${totalCollegeCostWithExtras.toLocaleString()}</Typography>
+              {/* FIXED: Projected Total Cost to 2 decimal places */}
+              <Typography variant="h5" fontWeight="bold">${formatCurrency(totalCollegeCostWithExtras)}</Typography>
               <Typography variant="body2" color="text.secondary">Projected Total Cost</Typography>
             </Grid>
           </Grid>
@@ -231,14 +241,12 @@ const CollegeSavingsCalculator: React.FC = () => {
           {/* Education Costs Tab */}
           {activeTab === 0 && (
             <Box>
+              <Typography variant="h6" gutterBottom>🎓 Education Cost Planning</Typography>
+              
               <Grid container spacing={3}>
-                {/* Child & Education Info */}
-                <Grid item xs={12} lg={6}>
-                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <SchoolIcon color="primary" />
-                    Child & Education Information
-                  </Typography>
-
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle1" gutterBottom>Child & College Information</Typography>
+                  
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
                       <TextField
@@ -247,7 +255,9 @@ const CollegeSavingsCalculator: React.FC = () => {
                         type="number"
                         value={data.childAge}
                         onChange={(e) => updateData('childAge', parseInt(e.target.value) || 0)}
-                        inputProps={{ min: 0, max: 17 }}
+                        InputProps={{
+                          endAdornment: <InputAdornment position="end">years</InputAdornment>,
+                        }}
                         sx={{ mb: 2 }}
                       />
                     </Grid>
@@ -257,8 +267,10 @@ const CollegeSavingsCalculator: React.FC = () => {
                         label="Years Until College"
                         type="number"
                         value={data.yearsToCollege}
-                        onChange={(e) => updateData('yearsToCollege', parseInt(e.target.value) || 1)}
-                        inputProps={{ min: 1, max: 20 }}
+                        onChange={(e) => updateData('yearsToCollege', parseInt(e.target.value) || 0)}
+                        InputProps={{
+                          endAdornment: <InputAdornment position="end">years</InputAdornment>,
+                        }}
                         sx={{ mb: 2 }}
                       />
                     </Grid>
@@ -267,8 +279,8 @@ const CollegeSavingsCalculator: React.FC = () => {
                         <InputLabel>College Type</InputLabel>
                         <Select
                           value={data.collegeType}
-                          onChange={(e) => updateData('collegeType', e.target.value)}
                           label="College Type"
+                          onChange={(e) => updateData('collegeType', e.target.value)}
                         >
                           <MenuItem value="community">Community College (2-year)</MenuItem>
                           <MenuItem value="public-instate">Public In-State (4-year)</MenuItem>
@@ -329,7 +341,7 @@ const CollegeSavingsCalculator: React.FC = () => {
                   </Box>
                 </Grid>
 
-                {/* Cost Projections */}
+                {/* Cost Projections - FIXED: All dollar amounts to 2 decimal places */}
                 <Grid item xs={12} lg={6}>
                   <Typography variant="h6" gutterBottom>📊 Cost Projections</Typography>
                   
@@ -337,7 +349,7 @@ const CollegeSavingsCalculator: React.FC = () => {
                     <Grid item xs={6}>
                       <Card sx={{ p: 2, textAlign: 'center' }}>
                         <Typography variant="h4" color="primary.main" fontWeight="bold">
-                          ${data.currentTuition.toLocaleString()}
+                          ${formatCurrency(data.currentTuition)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">Current Tuition</Typography>
                       </Card>
@@ -345,7 +357,7 @@ const CollegeSavingsCalculator: React.FC = () => {
                     <Grid item xs={6}>
                       <Card sx={{ p: 2, textAlign: 'center' }}>
                         <Typography variant="h4" color="warning.main" fontWeight="bold">
-                          ${projectedTuition.toLocaleString()}
+                          ${formatCurrency(projectedTuition)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">Future Tuition</Typography>
                       </Card>
@@ -353,7 +365,7 @@ const CollegeSavingsCalculator: React.FC = () => {
                     <Grid item xs={6}>
                       <Card sx={{ p: 2, textAlign: 'center' }}>
                         <Typography variant="h4" color="error.main" fontWeight="bold">
-                          ${totalCollegeCost.toLocaleString()}
+                          ${formatCurrency(totalCollegeCost)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">Total Tuition</Typography>
                       </Card>
@@ -361,50 +373,55 @@ const CollegeSavingsCalculator: React.FC = () => {
                     <Grid item xs={6}>
                       <Card sx={{ p: 2, textAlign: 'center' }}>
                         <Typography variant="h4" color="error.main" fontWeight="bold">
-                          ${totalCollegeCostWithExtras.toLocaleString()}
+                          ${formatCurrency(totalCollegeCostWithExtras)}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">Total with Expenses</Typography>
+                        <Typography variant="body2" color="text.secondary">Total with Extras</Typography>
                       </Card>
                     </Grid>
                   </Grid>
 
-                  {/* Cost Breakdown */}
+                  {/* Annual Cost Breakdown - FIXED: All dollar amounts to 2 decimal places */}
                   <Box sx={{ mt: 3 }}>
                     <Typography variant="subtitle1" gutterBottom>Annual Cost Breakdown (Future)</Typography>
-                    <TableContainer component={Paper} size="small">
-                      <Table>
+                    <TableContainer component={Paper} variant="outlined">
+                      <Table size="small">
                         <TableHead>
-                          <TableRow>
-                            <TableCell>Expense</TableCell>
-                            <TableCell align="right">Amount</TableCell>
-                            <TableCell align="right">4-Year Total</TableCell>
+                          <TableRow sx={{ bgcolor: 'grey.100' }}>
+                            <TableCell><strong>Expense Type</strong></TableCell>
+                            <TableCell align="right"><strong>Annual Cost</strong></TableCell>
+                            <TableCell align="right"><strong>Total (4 years)</strong></TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           <TableRow>
                             <TableCell>Tuition & Fees</TableCell>
-                            <TableCell align="right">${projectedTuition.toLocaleString()}</TableCell>
-                            <TableCell align="right">${totalCollegeCost.toLocaleString()}</TableCell>
+                            <TableCell align="right">${formatCurrency(projectedTuition)}</TableCell>
+                            <TableCell align="right">${formatCurrency(totalCollegeCost)}</TableCell>
                           </TableRow>
                           <TableRow>
                             <TableCell>Room & Board</TableCell>
-                            <TableCell align="right">${(projectedTuition * 0.2).toLocaleString()}</TableCell>
-                            <TableCell align="right">${(totalCollegeCost * 0.2).toLocaleString()}</TableCell>
+                            <TableCell align="right">${formatCurrency(projectedTuition * 0.15)}</TableCell>
+                            <TableCell align="right">${formatCurrency(totalCollegeCost * 0.15)}</TableCell>
                           </TableRow>
                           <TableRow>
                             <TableCell>Books & Supplies</TableCell>
-                            <TableCell align="right">${(projectedTuition * 0.05).toLocaleString()}</TableCell>
-                            <TableCell align="right">${(totalCollegeCost * 0.05).toLocaleString()}</TableCell>
+                            <TableCell align="right">${formatCurrency(projectedTuition * 0.05)}</TableCell>
+                            <TableCell align="right">${formatCurrency(totalCollegeCost * 0.05)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>Transportation</TableCell>
+                            <TableCell align="right">${formatCurrency(projectedTuition * 0.05)}</TableCell>
+                            <TableCell align="right">${formatCurrency(totalCollegeCost * 0.05)}</TableCell>
                           </TableRow>
                           <TableRow>
                             <TableCell>Personal Expenses</TableCell>
-                            <TableCell align="right">${(projectedTuition * 0.05).toLocaleString()}</TableCell>
-                            <TableCell align="right">${(totalCollegeCost * 0.05).toLocaleString()}</TableCell>
+                            <TableCell align="right">${formatCurrency(projectedTuition * 0.05)}</TableCell>
+                            <TableCell align="right">${formatCurrency(totalCollegeCost * 0.05)}</TableCell>
                           </TableRow>
                           <TableRow sx={{ bgcolor: 'error.50' }}>
                             <TableCell><strong>Total Annual</strong></TableCell>
-                            <TableCell align="right"><strong>${(projectedTuition * 1.3).toLocaleString()}</strong></TableCell>
-                            <TableCell align="right"><strong>${totalCollegeCostWithExtras.toLocaleString()}</strong></TableCell>
+                            <TableCell align="right"><strong>${formatCurrency(projectedTuition * 1.3)}</strong></TableCell>
+                            <TableCell align="right"><strong>${formatCurrency(totalCollegeCostWithExtras)}</strong></TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
@@ -485,124 +502,90 @@ const CollegeSavingsCalculator: React.FC = () => {
                       valueLabelDisplay="auto"
                     />
                     <Typography variant="caption" color="text.secondary">
-                      Conservative: 5-6%, Moderate: 7-8%, Aggressive: 9-10%
+                      Historical stock market average: 7-10% annually
                     </Typography>
                   </Box>
                 </Grid>
 
+                {/* 529 Plan Benefits Summary - FIXED: Future Balance to 2 decimal places */}
                 <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle1" gutterBottom>Tax Information</Typography>
+                  <Typography variant="subtitle1" gutterBottom>529 Plan Benefits Summary</Typography>
                   
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={data.using529Plan}
-                        onChange={(e) => updateData('using529Plan', e.target.checked)}
-                      />
-                    }
-                    label="Using 529 Plan"
-                    sx={{ mb: 2, display: 'block' }}
-                  />
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <Card sx={{ p: 2, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.main' }}>
+                        <Typography variant="h4" color="success.main" fontWeight="bold" textAlign="center">
+                          ${formatCurrency(futureBalance)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" textAlign="center">
+                          Future Balance at College Start
+                        </Typography>
+                      </Card>
+                    </Grid>
+                    
+                    <Grid item xs={6}>
+                      <Card sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h5" color="primary.main" fontWeight="bold">
+                          ${formatCurrency(annualTaxSavings)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">Annual Tax Savings</Typography>
+                      </Card>
+                    </Grid>
+                    
+                    <Grid item xs={6}>
+                      <Card sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="h5" color="warning.main" fontWeight="bold">
+                          ${formatCurrency(fundingGap)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">Remaining Gap</Typography>
+                      </Card>
+                    </Grid>
+                  </Grid>
 
-                  {data.using529Plan && (
-                    <>
-                      <TextField
-                        fullWidth
-                        label="State Tax Deduction Limit"
-                        type="number"
-                        value={data.stateDeduction}
-                        onChange={(e) => updateData('stateDeduction', parseFloat(e.target.value) || 0)}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                        }}
-                        helperText="Annual limit for state tax deductions"
-                        sx={{ mb: 2 }}
-                      />
-
-                      <Grid container spacing={2}>
+                  {/* Tax Benefits */}
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="subtitle2" gutterBottom>Tax Benefits</Typography>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={data.using529Plan}
+                          onChange={(e) => updateData('using529Plan', e.target.checked)}
+                        />
+                      }
+                      label="Using 529 Plan for tax benefits"
+                    />
+                    
+                    {data.using529Plan && (
+                      <Grid container spacing={2} sx={{ mt: 1 }}>
                         <Grid item xs={6}>
                           <TextField
                             fullWidth
-                            label="Federal Tax Bracket"
+                            label="State Tax Deduction Limit"
                             type="number"
-                            value={data.federalTaxBracket}
-                            onChange={(e) => updateData('federalTaxBracket', parseFloat(e.target.value) || 0)}
+                            value={data.stateDeduction}
+                            onChange={(e) => updateData('stateDeduction', parseFloat(e.target.value) || 0)}
                             InputProps={{
-                              endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                              startAdornment: <InputAdornment position="start">$</InputAdornment>,
                             }}
-                            sx={{ mb: 2 }}
+                            size="small"
                           />
                         </Grid>
                         <Grid item xs={6}>
                           <TextField
                             fullWidth
-                            label="State Tax Bracket"
+                            label="State Tax Rate"
                             type="number"
                             value={data.stateTaxBracket}
                             onChange={(e) => updateData('stateTaxBracket', parseFloat(e.target.value) || 0)}
                             InputProps={{
                               endAdornment: <InputAdornment position="end">%</InputAdornment>,
                             }}
-                            sx={{ mb: 2 }}
+                            size="small"
                           />
                         </Grid>
                       </Grid>
-                    </>
-                  )}
-                </Grid>
-
-                {/* 529 Benefits Summary */}
-                <Grid item xs={12}>
-                  <Card sx={{ bgcolor: 'success.50', border: '1px solid', borderColor: 'success.main' }}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom color="success.main">
-                        529 Plan Benefits Summary
-                      </Typography>
-                      
-                      <Grid container spacing={3}>
-                        <Grid item xs={12} md={4}>
-                          <Typography variant="subtitle2" gutterBottom>Future Balance</Typography>
-                          <Typography variant="h4" color="success.main" fontWeight="bold">
-                            ${futureBalance.toLocaleString()}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            At college start ({data.yearsToCollege} years)
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <Typography variant="subtitle2" gutterBottom>Annual Tax Savings</Typography>
-                          <Typography variant="h4" color="success.main" fontWeight="bold">
-                            ${annualTaxSavings.toLocaleString()}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            State deduction benefit
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <Typography variant="subtitle2" gutterBottom>Total Contributions</Typography>
-                          <Typography variant="h4" color="success.main" fontWeight="bold">
-                            ${(data.currentBalance + (data.monthlyContribution * 12 * data.yearsToCollege)).toLocaleString()}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Over {data.yearsToCollege} years
-                          </Typography>
-                        </Grid>
-                      </Grid>
-
-                      {data.using529Plan && (
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="subtitle2" gutterBottom>529 Plan Advantages:</Typography>
-                          <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                            <li>Tax-free growth on investments</li>
-                            <li>Tax-free withdrawals for qualified education expenses</li>
-                            <li>State tax deduction up to ${data.stateDeduction.toLocaleString()} annually</li>
-                            <li>High contribution limits (typically $300k+ lifetime)</li>
-                            <li>Flexibility to change beneficiary to family members</li>
-                          </ul>
-                        </Box>
-                      )}
-                    </CardContent>
-                  </Card>
+                    )}
+                  </Box>
                 </Grid>
               </Grid>
             </Box>
@@ -611,7 +594,7 @@ const CollegeSavingsCalculator: React.FC = () => {
           {/* Savings Strategy Tab */}
           {activeTab === 2 && (
             <Box>
-              <Typography variant="h6" gutterBottom>📈 Comprehensive Savings Strategy</Typography>
+              <Typography variant="h6" gutterBottom>🎯 Comprehensive Savings Strategy</Typography>
               
               <Grid container spacing={3}>
                 {/* Additional Funding Sources */}
@@ -620,15 +603,15 @@ const CollegeSavingsCalculator: React.FC = () => {
                   
                   <TextField
                     fullWidth
-                    label="Annual Relatives' Contributions"
+                    label="Annual Family/Relatives Contribution"
                     type="number"
                     value={data.relativesContribution}
                     onChange={(e) => updateData('relativesContribution', parseFloat(e.target.value) || 0)}
                     InputProps={{
                       startAdornment: <InputAdornment position="start">$</InputAdornment>,
                     }}
-                    helperText="Grandparents, family gifts"
                     sx={{ mb: 2 }}
+                    helperText="Expected annual gifts from grandparents, relatives, etc."
                   />
 
                   <TextField
@@ -640,136 +623,171 @@ const CollegeSavingsCalculator: React.FC = () => {
                     InputProps={{
                       startAdornment: <InputAdornment position="start">$</InputAdornment>,
                     }}
-                    helperText="Merit, need-based, athletic"
                     sx={{ mb: 2 }}
+                    helperText="Merit, need-based, or athletic scholarships"
                   />
 
                   <TextField
                     fullWidth
-                    label="Student Work/Study Income"
+                    label="Annual Work-Study Income"
                     type="number"
                     value={data.workStudyIncome}
                     onChange={(e) => updateData('workStudyIncome', parseFloat(e.target.value) || 0)}
                     InputProps={{
                       startAdornment: <InputAdornment position="start">$</InputAdornment>,
                     }}
-                    helperText="Part-time work, co-ops"
                     sx={{ mb: 2 }}
+                    helperText="Expected earnings from part-time work during college"
                   />
-
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={data.considerStudentLoans}
-                        onChange={(e) => updateData('considerStudentLoans', e.target.checked)}
-                      />
-                    }
-                    label="Consider Student Loans if Needed"
-                    sx={{ mb: 2, display: 'block' }}
-                  />
-
-                  {data.considerStudentLoans && (
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}>
-                        <TextField
-                          fullWidth
-                          label="Max Loan Amount"
-                          type="number"
-                          value={data.maxLoanAmount}
-                          onChange={(e) => updateData('maxLoanAmount', parseFloat(e.target.value) || 0)}
-                          InputProps={{
-                            startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                          }}
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          fullWidth
-                          label="Loan Interest Rate"
-                          type="number"
-                          value={data.loanInterestRate}
-                          onChange={(e) => updateData('loanInterestRate', parseFloat(e.target.value) || 0)}
-                          InputProps={{
-                            endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                          }}
-                        />
-                      </Grid>
-                    </Grid>
-                  )}
                 </Grid>
 
-                {/* Funding Summary */}
+                {/* Funding Summary - FIXED: All dollar amounts to 2 decimal places */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle1" gutterBottom>Funding Summary</Typography>
                   
-                  <TableContainer component={Paper}>
+                  <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
-                        <TableRow>
-                          <TableCell>Funding Source</TableCell>
-                          <TableCell align="right">Amount</TableCell>
-                          <TableCell align="right">% of Total</TableCell>
+                        <TableRow sx={{ bgcolor: 'grey.100' }}>
+                          <TableCell><strong>Funding Source</strong></TableCell>
+                          <TableCell align="right"><strong>Total Amount</strong></TableCell>
+                          <TableCell align="right"><strong>% of Need</strong></TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         <TableRow>
-                          <TableCell>529 Plan Balance</TableCell>
-                          <TableCell align="right">${futureBalance.toLocaleString()}</TableCell>
+                          <TableCell>529 Plan Savings</TableCell>
+                          <TableCell align="right">${formatCurrency(futureBalance)}</TableCell>
                           <TableCell align="right">{((futureBalance / totalCollegeCostWithExtras) * 100).toFixed(1)}%</TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell>Relatives' Gifts</TableCell>
-                          <TableCell align="right">${(data.relativesContribution * data.collegeDuration).toLocaleString()}</TableCell>
+                          <TableCell>Family Contributions</TableCell>
+                          <TableCell align="right">${formatCurrency(data.relativesContribution * data.collegeDuration)}</TableCell>
                           <TableCell align="right">{(((data.relativesContribution * data.collegeDuration) / totalCollegeCostWithExtras) * 100).toFixed(1)}%</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Scholarships</TableCell>
-                          <TableCell align="right">${(data.scholarshipExpected * data.collegeDuration).toLocaleString()}</TableCell>
+                          <TableCell align="right">${formatCurrency(data.scholarshipExpected * data.collegeDuration)}</TableCell>
                           <TableCell align="right">{(((data.scholarshipExpected * data.collegeDuration) / totalCollegeCostWithExtras) * 100).toFixed(1)}%</TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell>Work/Study</TableCell>
-                          <TableCell align="right">${(data.workStudyIncome * data.collegeDuration).toLocaleString()}</TableCell>
+                          <TableCell>Work-Study</TableCell>
+                          <TableCell align="right">${formatCurrency(data.workStudyIncome * data.collegeDuration)}</TableCell>
                           <TableCell align="right">{(((data.workStudyIncome * data.collegeDuration) / totalCollegeCostWithExtras) * 100).toFixed(1)}%</TableCell>
                         </TableRow>
-                        <TableRow sx={{ bgcolor: fundingGap > 0 ? 'error.50' : 'success.50' }}>
+                        <TableRow sx={{ bgcolor: fundingGap > 0 ? 'warning.50' : 'success.50' }}>
                           <TableCell><strong>Funding Gap</strong></TableCell>
-                          <TableCell align="right"><strong>${fundingGap.toLocaleString()}</strong></TableCell>
+                          <TableCell align="right"><strong>${formatCurrency(fundingGap)}</strong></TableCell>
                           <TableCell align="right"><strong>{((fundingGap / totalCollegeCostWithExtras) * 100).toFixed(1)}%</strong></TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
                   </TableContainer>
 
+                  {/* Action Items */}
                   {fundingGap > 0 && (
                     <Alert severity="warning" sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        💡 Recommendations to Close ${formatCurrency(fundingGap)} Gap:
+                      </Typography>
                       <Typography variant="body2">
-                        <strong>Funding Gap: ${fundingGap.toLocaleString()}</strong>
-                        <br />
-                        Consider increasing monthly contributions to ${(data.monthlyContribution + (fundingGap / (data.yearsToCollege * 12))).toFixed(0)} 
-                        or explore additional funding sources.
+                        • Increase monthly contributions by ${formatCurrency((fundingGap / (data.yearsToCollege * 12)) * 1.2)}
+                      </Typography>
+                      <Typography variant="body2">
+                        • Consider more aggressive scholarship pursuit
+                      </Typography>
+                      <Typography variant="body2">
+                        • Explore work-study and summer job opportunities
                       </Typography>
                     </Alert>
                   )}
+                </Grid>
+
+                {/* Student Loans */}
+                <Grid item xs={12}>
+                  <Accordion>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography variant="subtitle1">💳 Student Loan Planning</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Grid container spacing={3}>
+                        <Grid item xs={12} md={6}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={data.considerStudentLoans}
+                                onChange={(e) => updateData('considerStudentLoans', e.target.checked)}
+                              />
+                            }
+                            label="Consider student loans if needed"
+                          />
+                          
+                          {data.considerStudentLoans && (
+                            <Box sx={{ mt: 2 }}>
+                              <TextField
+                                fullWidth
+                                label="Maximum Loan Amount"
+                                type="number"
+                                value={data.maxLoanAmount}
+                                onChange={(e) => updateData('maxLoanAmount', parseFloat(e.target.value) || 0)}
+                                InputProps={{
+                                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                }}
+                                sx={{ mb: 2 }}
+                              />
+                              
+                              <TextField
+                                fullWidth
+                                label="Expected Interest Rate"
+                                type="number"
+                                value={data.loanInterestRate}
+                                onChange={(e) => updateData('loanInterestRate', parseFloat(e.target.value) || 0)}
+                                InputProps={{
+                                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                                }}
+                              />
+                            </Box>
+                          )}
+                        </Grid>
+                        
+                        {data.considerStudentLoans && (
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" gutterBottom>Loan Impact Analysis</Typography>
+                            <Typography variant="body2" gutterBottom>
+                              Monthly payment (10-year term): ${formatCurrency((data.maxLoanAmount * (data.loanInterestRate/100/12) * Math.pow(1 + data.loanInterestRate/100/12, 120)) / (Math.pow(1 + data.loanInterestRate/100/12, 120) - 1))}
+                            </Typography>
+                            <Typography variant="body2" gutterBottom>
+                              Total interest paid: ${formatCurrency((data.maxLoanAmount * (data.loanInterestRate/100/12) * Math.pow(1 + data.loanInterestRate/100/12, 120)) / (Math.pow(1 + data.loanInterestRate/100/12, 120) - 1) * 120 - data.maxLoanAmount)}
+                            </Typography>
+                            <Alert severity="info" sx={{ mt: 1 }}>
+                              <Typography variant="body2">
+                                Federal student loans typically offer better terms than private loans
+                              </Typography>
+                            </Alert>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </AccordionDetails>
+                  </Accordion>
                 </Grid>
 
                 {/* Year-by-Year Projections */}
                 <Grid item xs={12}>
                   <Accordion>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                      <Typography variant="h6">📅 Year-by-Year Savings Projections</Typography>
+                      <Typography variant="subtitle1">📈 Year-by-Year Savings Projections</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
-                      <TableContainer component={Paper}>
+                      <TableContainer component={Paper} variant="outlined">
                         <Table size="small">
                           <TableHead>
-                            <TableRow>
-                              <TableCell>Year</TableCell>
-                              <TableCell>Child Age</TableCell>
-                              <TableCell align="right">Balance</TableCell>
-                              <TableCell align="right">Annual Contribution</TableCell>
-                              <TableCell align="right">Growth</TableCell>
-                              <TableCell align="right">Tuition That Year</TableCell>
+                            <TableRow sx={{ bgcolor: 'grey.100' }}>
+                              <TableCell><strong>Year</strong></TableCell>
+                              <TableCell><strong>Child Age</strong></TableCell>
+                              <TableCell align="right"><strong>Annual Contribution</strong></TableCell>
+                              <TableCell align="right"><strong>Investment Growth</strong></TableCell>
+                              <TableCell align="right"><strong>Balance</strong></TableCell>
+                              <TableCell align="right"><strong>College Cost That Year</strong></TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -777,10 +795,10 @@ const CollegeSavingsCalculator: React.FC = () => {
                               <TableRow key={projection.year}>
                                 <TableCell>{projection.year}</TableCell>
                                 <TableCell>{projection.childAge}</TableCell>
-                                <TableCell align="right">${projection.balance.toLocaleString()}</TableCell>
-                                <TableCell align="right">${projection.contributions.toLocaleString()}</TableCell>
-                                <TableCell align="right">${projection.growth.toLocaleString()}</TableCell>
-                                <TableCell align="right">${projection.annualTuition.toLocaleString()}</TableCell>
+                                <TableCell align="right">${formatCurrency(projection.contributions)}</TableCell>
+                                <TableCell align="right">${formatCurrency(projection.growth)}</TableCell>
+                                <TableCell align="right">${formatCurrency(projection.balance)}</TableCell>
+                                <TableCell align="right">${formatCurrency(projection.annualTuition * 1.3)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -789,29 +807,23 @@ const CollegeSavingsCalculator: React.FC = () => {
                     </AccordionDetails>
                   </Accordion>
                 </Grid>
+              </Grid>
 
-                {/* Strategies & Tips */}
+              {/* Key Tips */}
+              <Grid container spacing={2} sx={{ mt: 3 }}>
                 <Grid item xs={12}>
-                  <Alert severity="info">
-                    <Typography variant="subtitle2" gutterBottom>💡 College Savings Strategies</Typography>
+                  <Alert severity="success">
+                    <Typography variant="subtitle2" gutterBottom>🎯 Key College Savings Tips</Typography>
                     <Grid container spacing={2}>
                       <Grid item xs={12} md={6}>
-                        <Typography variant="body2" gutterBottom><strong>Early Years (Age 0-10):</strong></Typography>
-                        <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                          <li>Start with aggressive growth investments</li>
-                          <li>Maximize state tax deductions</li>
-                          <li>Set up automatic contributions</li>
-                          <li>Encourage family gifts to 529 plan</li>
-                        </ul>
+                        <Typography variant="body2">• Start early - compound growth is powerful</Typography>
+                        <Typography variant="body2">• Automate contributions to stay consistent</Typography>
+                        <Typography variant="body2">• Take advantage of 529 tax benefits</Typography>
                       </Grid>
                       <Grid item xs={12} md={6}>
-                        <Typography variant="body2" gutterBottom><strong>Later Years (Age 11-18):</strong></Typography>
-                        <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                          <li>Shift to more conservative investments</li>
-                          <li>Research scholarship opportunities</li>
-                          <li>Consider in-state vs. out-of-state options</li>
-                          <li>Explore community college for first 2 years</li>
-                        </ul>
+                        <Typography variant="body2">• Review and adjust annually</Typography>
+                        <Typography variant="body2">• Consider age-based investment options</Typography>
+                        <Typography variant="body2">• Don't forget about scholarships and grants</Typography>
                       </Grid>
                     </Grid>
                   </Alert>
@@ -825,4 +837,4 @@ const CollegeSavingsCalculator: React.FC = () => {
   );
 };
 
-export default CollegeSavingsCalculator; 
+export default CollegeSavingsCalculator;

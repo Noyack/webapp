@@ -33,7 +33,7 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
         </div>
         
         {/* Main Content - Flexible middle column */}
-        <main className="overflow-y-auto h-screen py-6 px-5 relative">
+        <main className="mainCont overflow-y-auto h-screen py-6 px-5 relative">
           <div className="max-w-7xl mx-auto flex flex-col gap-10">
           <div className="search-input-container">
             {/* <GlobalSearchInput /> */}

@@ -1,4 +1,4 @@
-// tabs/InvestmentDetailsTab.tsx
+// src/pages/Planning/components/401k/InvestmentDetailsTab.tsx
 import React from 'react';
 import {
   Box,
@@ -45,6 +45,67 @@ const InvestmentDetailsTab: React.FC<InvestmentDetailsTabProps> = ({
   updateData,
   handleInputChange
 }) => {
+
+  // Helper function to get display value (empty string for 0, except for required fields)
+  const getDisplayValue = (field: keyof FourOhOneKData, value: number): string => {
+    // Ages and rates should always show a value
+    if (field === 'currentAge' || field === 'retirementAge' || 
+        field === 'estimatedReturn' || field === 'totalFees' || 
+        field === 'inflationRate' || field === 'incomeGrowthRate') {
+      return value.toString();
+    }
+    
+    // Other numeric fields show empty string for 0
+    return value === 0 ? '' : value.toString();
+  };
+
+  // Helper for handling number input changes
+  const handleNumberInputChange = (field: keyof FourOhOneKData) => {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      
+      // Allow empty string (will be converted to 0)
+      if (value === '') {
+        handleInputChange(field, 0);
+        return;
+      }
+      
+      // Parse the number
+      const numValue = field === 'currentAge' || field === 'retirementAge' 
+        ? parseInt(value) 
+        : parseFloat(value);
+      
+      // Only update if it's a valid number
+      if (!isNaN(numValue)) {
+        handleInputChange(field, numValue);
+      }
+    };
+  };
+
+  // Validation error checking
+  const getValidationError = (field: keyof FourOhOneKData): string | undefined => {
+    switch (field) {
+      case 'currentAge':
+        if (data.currentAge < 1 || data.currentAge > 120) {
+          return 'Age must be between 1 and 120';
+        }
+        if (data.currentAge >= data.retirementAge) {
+          return 'Current age must be less than retirement age';
+        }
+        break;
+      
+      case 'retirementAge':
+        if (data.retirementAge <= data.currentAge) {
+          return 'Retirement age must be greater than current age';
+        }
+        if (data.retirementAge > 120) {
+          return 'Retirement age cannot exceed 120';
+        }
+        break;
+    }
+    return undefined;
+  };
+
   return (
     <Box>
       <Grid container spacing={3}>
@@ -62,16 +123,16 @@ const InvestmentDetailsTab: React.FC<InvestmentDetailsTabProps> = ({
                   fullWidth
                   label="Current Age"
                   type="number"
-                  value={data.currentAge}
-                  onChange={(e) => handleInputChange('currentAge', parseInt(e.target.value) || 0)}
+                  value={getDisplayValue('currentAge', data.currentAge)}
+                  onChange={handleNumberInputChange('currentAge')}
                   inputProps={{ 
-                    min: 18, 
-                    max: 75,
+                    min: 1, 
+                    max: 120,
                     'aria-describedby': 'age-helper-text'
                   }}
                   sx={{ mb: 2 }}
-                  helperText={data.currentAge >= 50 ? "✓ Eligible for catch-up contributions" : "Catch-up eligible at 50"}
-                  id="age-helper-text"
+                  error={!!getValidationError('currentAge')}
+                  helperText={getValidationError('currentAge') || (data.currentAge >= 50 ? "✓ Eligible for catch-up contributions" : "Catch-up eligible at 50")}
                 />
               </Tooltip>
             </Grid>
@@ -81,11 +142,12 @@ const InvestmentDetailsTab: React.FC<InvestmentDetailsTabProps> = ({
                   fullWidth
                   label="Retirement Age"
                   type="number"
-                  value={data.retirementAge}
-                  onChange={(e) => handleInputChange('retirementAge', parseInt(e.target.value) || 65)}
-                  inputProps={{ min: 50, max: 75 }}
+                  value={getDisplayValue('retirementAge', data.retirementAge)}
+                  onChange={handleNumberInputChange('retirementAge')}
+                  inputProps={{ min: data.currentAge + 1, max: 120 }}
                   sx={{ mb: 2 }}
-                  helperText={`${calculations.yearsToRetirement} years to retirement`}
+                  error={!!getValidationError('retirementAge')}
+                  helperText={getValidationError('retirementAge') || `${calculations.yearsToRetirement} years to retirement`}
                 />
               </Tooltip>
             </Grid>
@@ -95,8 +157,8 @@ const InvestmentDetailsTab: React.FC<InvestmentDetailsTabProps> = ({
                   fullWidth
                   label="Annual Income"
                   type="number"
-                  value={data.annualIncome}
-                  onChange={(e) => handleInputChange('annualIncome', parseFloat(e.target.value) || 0)}
+                  value={getDisplayValue('annualIncome', data.annualIncome)}
+                  onChange={handleNumberInputChange('annualIncome')}
                   InputProps={{
                     startAdornment: <InputAdornment position="start">$</InputAdornment>,
                   }}
@@ -129,14 +191,14 @@ const InvestmentDetailsTab: React.FC<InvestmentDetailsTabProps> = ({
               fullWidth
               label="Current 401(k) Balance"
               type="number"
-              value={data.currentBalance}
-              onChange={(e) => handleInputChange('currentBalance', parseFloat(e.target.value) || 0)}
+              value={getDisplayValue('currentBalance', data.currentBalance)}
+              onChange={handleNumberInputChange('currentBalance')}
               InputProps={{
                 startAdornment: <InputAdornment position="start">$</InputAdornment>,
               }}
               inputProps={{ min: 0, step: 1000 }}
               sx={{ mb: 2 }}
-              helperText={`${calculations.nationalComparison.balancePercentile.toFixed(0)}th percentile for your age`}
+              helperText={data.currentBalance > 0 ? `${calculations.nationalComparison.balancePercentile.toFixed(0)}th percentile for your age` : 'Enter your current balance'}
             />
           </Tooltip>
 
@@ -147,8 +209,8 @@ const InvestmentDetailsTab: React.FC<InvestmentDetailsTabProps> = ({
                   fullWidth
                   label="Monthly Contribution"
                   type="number"
-                  value={data.monthlyContribution}
-                  onChange={(e) => handleInputChange('monthlyContribution', parseFloat(e.target.value) || 0)}
+                  value={getDisplayValue('monthlyContribution', data.monthlyContribution)}
+                  onChange={handleNumberInputChange('monthlyContribution')}
                   InputProps={{
                     startAdornment: <InputAdornment position="start">$</InputAdornment>,
                   }}
@@ -163,8 +225,8 @@ const InvestmentDetailsTab: React.FC<InvestmentDetailsTabProps> = ({
                   fullWidth
                   label="Contribution %"
                   type="number"
-                  value={calculations.contributionPercent.toFixed(2)}
-                  onChange={(e) => handleInputChange('contributionPercent', parseFloat(e.target.value) || 0)}
+                  value={getDisplayValue('contributionPercent', calculations.contributionPercent)}
+                  onChange={handleNumberInputChange('contributionPercent')}
                   InputProps={{
                     endAdornment: <InputAdornment position="end">%</InputAdornment>,
                   }}
@@ -211,8 +273,8 @@ const InvestmentDetailsTab: React.FC<InvestmentDetailsTabProps> = ({
                   fullWidth
                   label="Employer Match"
                   type="number"
-                  value={data.employerMatch}
-                  onChange={(e) => handleInputChange('employerMatch', parseFloat(e.target.value) || 0)}
+                  value={getDisplayValue('employerMatch', data.employerMatch)}
+                  onChange={handleNumberInputChange('employerMatch')}
                   InputProps={{
                     endAdornment: <InputAdornment position="end">%</InputAdornment>,
                   }}
@@ -223,193 +285,135 @@ const InvestmentDetailsTab: React.FC<InvestmentDetailsTabProps> = ({
               </Tooltip>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Tooltip title="Maximum salary percentage that qualifies for employer match">
+              <Tooltip title="Maximum salary percentage your employer will match">
                 <TextField
                   fullWidth
                   label="Match Limit"
                   type="number"
-                  value={data.employerMatchLimit}
-                  onChange={(e) => handleInputChange('employerMatchLimit', parseFloat(e.target.value) || 0)}
+                  value={getDisplayValue('employerMatchLimit', data.employerMatchLimit)}
+                  onChange={handleNumberInputChange('employerMatchLimit')}
                   InputProps={{
-                    endAdornment: <InputAdornment position="end">% of salary</InputAdornment>,
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
                   }}
                   inputProps={{ min: 0, max: 25, step: 0.5 }}
-                  helperText="Maximum matched"
+                  helperText="% of salary matched"
                   sx={{ mb: 2 }}
                 />
               </Tooltip>
             </Grid>
           </Grid>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Tooltip title="Expected annual investment return before fees">
-                <TextField
-                  fullWidth
-                  label="Estimated Rate of Return"
-                  type="number"
-                  value={data.estimatedReturn}
-                  onChange={(e) => handleInputChange('estimatedReturn', parseFloat(e.target.value) || 0)}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                  }}
-                  inputProps={{ min: 0, max: 15, step: 0.5 }}
-                  sx={{ mb: 2 }}
-                />
-              </Tooltip>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Tooltip title="Annual fees charged by your 401(k) plan and investment funds">
-                <TextField
-                  fullWidth
-                  label="Total 401(k) Fees"
-                  type="number"
-                  value={data.totalFees}
-                  onChange={(e) => handleInputChange('totalFees', parseFloat(e.target.value) || 0)}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                  }}
-                  inputProps={{ min: 0, max: 5, step: 0.25 }}
-                  sx={{ mb: 2 }}
-                  helperText={data.totalFees > 1.5 ? "High fees - consider lower-cost options" : "Reasonable fee level"}
-                />
-              </Tooltip>
-            </Grid>
-          </Grid>
+          {/* Employer Match Analysis */}
+          {data.employerMatch > 0 && data.employerMatchLimit > 0 && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: calculations.currentEmployerMatch < calculations.maxEmployerMatch ? 'warning.50' : 'success.50', borderRadius: 1 }}>
+              <Typography variant="body2" gutterBottom>
+                <strong>Employer Match Analysis:</strong>
+              </Typography>
+              <Typography variant="body2">
+                Current: {formatCurrency(calculations.currentEmployerMatch)} / Max: {formatCurrency(calculations.maxEmployerMatch)}
+              </Typography>
+              <Typography variant="body2" color={calculations.currentEmployerMatch < calculations.maxEmployerMatch ? 'warning.main' : 'success.main'}>
+                {calculations.currentEmployerMatch < calculations.maxEmployerMatch 
+                  ? `⚠️ Missing ${formatCurrency(calculations.maxEmployerMatch - calculations.currentEmployerMatch)} in free money!`
+                  : '✓ Maximizing employer match'
+                }
+              </Typography>
+            </Box>
+          )}
         </Grid>
 
-        {/* Enhanced Employer Match Analysis */}
+        {/* Investment Parameters */}
         <Grid item xs={12}>
-          <Card sx={{ bgcolor: calculations.currentEmployerMatch >= calculations.maxEmployerMatch ? 'success.50' : 'warning.50' }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>💰 Enhanced Employer Match Analysis</Typography>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Typography variant="body2" color="text.secondary">Monthly Match</Typography>
-                  <Typography variant="h5" color="success.main" fontWeight="bold">
-                    {formatCurrency(calculations.monthlyEmployerMatch)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Typography variant="body2" color="text.secondary">Annual Match</Typography>
-                  <Typography variant="h5" color="success.main" fontWeight="bold">
-                    {formatCurrency(calculations.currentEmployerMatch)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Typography variant="body2" color="text.secondary">Maximum Possible</Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(calculations.maxEmployerMatch)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Typography variant="body2" color="text.secondary">Match Efficiency</Typography>
-                  <Typography variant="h5" color={calculations.currentEmployerMatch >= calculations.maxEmployerMatch ? 'success.main' : 'warning.main'} fontWeight="bold">
-                    {((calculations.currentEmployerMatch / calculations.maxEmployerMatch) * 100).toFixed(0)}%
-                  </Typography>
-                </Grid>
-              </Grid>
-              
-              {calculations.currentEmployerMatch < calculations.maxEmployerMatch && (
-                <Alert severity="warning" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Missing Free Money!</strong> You're leaving {formatCurrency(calculations.maxEmployerMatch - calculations.currentEmployerMatch)} per year on the table.
-                    <br />
-                    Increase your contribution to {data.employerMatchLimit}% to maximize employer match.
-                  </Typography>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Advanced Settings */}
-        <Grid item xs={12}>
-          <Accordion>
+          <Accordion defaultExpanded>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="h6">⚙️ Advanced Settings</Typography>
+              <Typography variant="h6">Investment Parameters</Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Grid container spacing={3}>
-                <Grid item xs={12} md={4}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={data.includeInflation}
-                        onChange={(e) => updateData('includeInflation', e.target.checked)}
-                      />
-                    }
-                    label="Include Inflation/Income Growth"
-                  />
-                </Grid>
-                {data.includeInflation && (
-                  <>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Inflation Rate"
-                        type="number"
-                        value={data.inflationRate}
-                        onChange={(e) => updateData('inflationRate', parseFloat(e.target.value) || 0)}
-                        InputProps={{
-                          endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                        }}
-                        inputProps={{ min: 0, max: 10, step: 0.25 }}
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Income Growth Rate"
-                        type="number"
-                        value={data.incomeGrowthRate}
-                        onChange={(e) => updateData('incomeGrowthRate', parseFloat(e.target.value) || 0)}
-                        InputProps={{
-                          endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                        }}
-                        inputProps={{ min: 0, max: 10, step: 0.25 }}
-                        size="small"
-                      />
-                    </Grid>
-                  </>
-                )}
-                
-                {/* Risk Profile Selection */}
-                <Grid item xs={12} md={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Risk Profile</InputLabel>
-                    <Select
-                      value={data.riskProfile}
-                      label="Risk Profile"
-                      onChange={(e) => updateData('riskProfile', e.target.value)}
-                    >
-                      <MenuItem value="conservative">Conservative</MenuItem>
-                      <MenuItem value="moderate">Moderate</MenuItem>
-                      <MenuItem value="aggressive">Aggressive</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                {/* Social Security Estimate */}
-                <Grid item xs={12} md={4}>
-                  <Tooltip title="Estimated monthly Social Security benefits at retirement">
+                <Grid item xs={12} sm={4}>
+                  <Tooltip title="Expected annual return on your 401(k) investments">
                     <TextField
                       fullWidth
-                      label="Social Security Estimate"
+                      label="Expected Return"
                       type="number"
-                      value={data.socialSecurityEstimate}
-                      onChange={(e) => updateData('socialSecurityEstimate', parseFloat(e.target.value) || 0)}
+                      value={getDisplayValue('estimatedReturn', data.estimatedReturn)}
+                      onChange={handleNumberInputChange('estimatedReturn')}
                       InputProps={{
-                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                        endAdornment: <InputAdornment position="end">/month</InputAdornment>
+                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
                       }}
-                      inputProps={{ min: 0, step: 100 }}
-                      size="small"
+                      inputProps={{ min: 0, max: 50, step: 0.1 }}
+                      helperText="Historical average: ~7%"
+                    />
+                  </Tooltip>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Tooltip title="Total annual fees (expense ratios + admin fees)">
+                    <TextField
+                      fullWidth
+                      label="Total Fees"
+                      type="number"
+                      value={getDisplayValue('totalFees', data.totalFees)}
+                      onChange={handleNumberInputChange('totalFees')}
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                      }}
+                      inputProps={{ min: 0, max: 5, step: 0.1 }}
+                      helperText="Target: <1.0%"
                     />
                   </Tooltip>
                 </Grid>
               </Grid>
+
+              <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="body2" gutterBottom>
+                  <strong>Inflation & Growth Settings:</strong>
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={data.includeInflation}
+                          onChange={(e) => updateData('includeInflation', e.target.checked)}
+                        />
+                      }
+                      label="Include Inflation"
+                    />
+                  </Grid>
+                  {data.includeInflation && (
+                    <>
+                      <Grid item xs={12} sm={4}>
+                        <TextField
+                          fullWidth
+                          label="Inflation Rate"
+                          type="number"
+                          value={getDisplayValue('inflationRate', data.inflationRate)}
+                          onChange={handleNumberInputChange('inflationRate')}
+                          InputProps={{
+                            endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                          }}
+                          inputProps={{ min: 0, max: 10, step: 0.1 }}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <TextField
+                          fullWidth
+                          label="Income Growth"
+                          type="number"
+                          value={getDisplayValue('incomeGrowthRate', data.incomeGrowthRate)}
+                          onChange={handleNumberInputChange('incomeGrowthRate')}
+                          InputProps={{
+                            endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                          }}
+                          inputProps={{ min: 0, max: 10, step: 0.1 }}
+                          size="small"
+                        />
+                      </Grid>
+                    </>
+                  )}
+                </Grid>
+              </Box>
             </AccordionDetails>
           </Accordion>
         </Grid>

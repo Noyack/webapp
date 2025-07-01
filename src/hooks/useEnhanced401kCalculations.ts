@@ -1,4 +1,4 @@
-// hooks/useEnhanced401kCalculations.ts
+// src/hooks/useEnhanced401kCalculations.ts
 // Custom hook for all 401(k) calculations with performance optimization
 
 import { useCallback, useMemo } from 'react';
@@ -9,23 +9,29 @@ import {
   SavingsAssessment,
   NATIONAL_AVERAGES,
   CONTRIBUTION_LIMITS,
-  formatCurrency
+  formatCurrency,
+  getAgeGroup,
+  calculateMarginalTaxRate
 } from '../utils/fourOhOneK';
 
 export const useEnhanced401kCalculations = (data: FourOhOneKData) => {
   
   // Main calculations with memoization
   const calculations = useMemo((): EnhancedCalculations => {
-    const yearsToRetirement = data.retirementAge - data.currentAge;
+    const yearsToRetirement = Math.max(0, data.retirementAge - data.currentAge);
     const monthlyIncome = data.annualIncome / 12;
-    const contributionPercent = (data.monthlyContribution * 12) / data.annualIncome * 100;
+    
+    // Calculate contribution percent more safely
+    const contributionPercent = data.annualIncome > 0 ? 
+      (data.monthlyContribution * 12) / data.annualIncome * 100 : 0;
     
     // Enhanced employer match with catch-up
     const baseContribution = data.monthlyContribution * 12;
     const catchUpContribution = data.includeCatchUp && data.currentAge >= 50 ? CONTRIBUTION_LIMITS.catchUp : 0;
     const totalAnnualContribution = baseContribution + catchUpContribution;
     
-    const maxEmployerMatch = (data.annualIncome * data.employerMatchLimit / 100) * (data.employerMatch / 100);
+    const maxEmployerMatch = data.annualIncome > 0 ? 
+      (data.annualIncome * data.employerMatchLimit / 100) * (data.employerMatch / 100) : 0;
     const currentEmployerMatch = Math.min(
       baseContribution * (data.employerMatch / 100),
       maxEmployerMatch
@@ -34,15 +40,24 @@ export const useEnhanced401kCalculations = (data: FourOhOneKData) => {
     
     // Enhanced projections with account type considerations
     const calculateFutureValue = () => {
+      if (yearsToRetirement <= 0) {
+        return {
+          projections: [],
+          totalTradContributions: 0,
+          totalRothContributions: 0,
+          totalEmployerMatch: 0
+        };
+      }
+
       let balance = data.currentBalance;
       let yearlyContribution = totalAnnualContribution;
       let yearlyEmployerMatch = currentEmployerMatch;
-      const netReturn = (data.estimatedReturn - data.totalFees) / 100;
+      const netReturn = Math.max(0, (data.estimatedReturn - data.totalFees) / 100);
       
       const projections = [];
       let totalTradContributions = 0;
       let totalRothContributions = 0;
-      let totalEmployerMatch = 0;
+      let totalEmployerMatchAccumulated = 0;
       
       for (let year = 1; year <= yearsToRetirement; year++) {
         // Apply growth to existing balance
@@ -58,11 +73,11 @@ export const useEnhanced401kCalculations = (data: FourOhOneKData) => {
         
         totalTradContributions += traditionalAmount;
         totalRothContributions += rothAmount;
-        totalEmployerMatch += yearlyEmployerMatch;
+        totalEmployerMatchAccumulated += yearlyEmployerMatch;
         
         const age = data.currentAge + year;
-        const cumulativeContributions = data.currentBalance + (totalTradContributions + totalRothContributions);
-        const totalGrowth = balance - cumulativeContributions - totalEmployerMatch;
+        const cumulativeContributions = totalTradContributions + totalRothContributions;
+        const totalGrowth = balance - data.currentBalance - cumulativeContributions - totalEmployerMatchAccumulated;
         
         projections.push({
           year,
@@ -71,31 +86,39 @@ export const useEnhanced401kCalculations = (data: FourOhOneKData) => {
           yearlyContribution,
           yearlyEmployerMatch,
           cumulativeContributions,
-          cumulativeEmployerMatch: totalEmployerMatch,
+          cumulativeEmployerMatch: totalEmployerMatchAccumulated,
           totalGrowth,
-          rothBalance: rothAmount > 0 ? (rothAmount * year * (1 + netReturn)) : 0,
-          traditionalBalance: balance - (rothAmount > 0 ? (rothAmount * year * (1 + netReturn)) : 0)
+          rothBalance: totalRothContributions > 0 ? 
+            (totalRothContributions * Math.pow(1 + netReturn, year)) : 0,
+          traditionalBalance: balance - (totalRothContributions > 0 ? 
+            (totalRothContributions * Math.pow(1 + netReturn, year)) : 0)
         });
         
         // Apply income growth for next year
-        if (data.includeInflation) {
-          yearlyContribution *= (1 + data.incomeGrowthRate / 100);
-          yearlyEmployerMatch *= (1 + data.incomeGrowthRate / 100);
+        if (data.includeInflation && data.incomeGrowthRate > 0) {
+          const growthRate = data.incomeGrowthRate / 100;
+          yearlyContribution *= (1 + growthRate);
+          yearlyEmployerMatch *= (1 + growthRate);
         }
       }
       
-      return { projections, totalTradContributions, totalRothContributions, totalEmployerMatch };
+      return { 
+        projections, 
+        totalTradContributions, 
+        totalRothContributions, 
+        totalEmployerMatch: totalEmployerMatchAccumulated 
+      };
     };
 
     const { projections, totalTradContributions, totalRothContributions, totalEmployerMatch } = calculateFutureValue();
     const finalBalance = projections.length > 0 ? projections[projections.length - 1].balance : data.currentBalance;
     const totalContributions = totalTradContributions + totalRothContributions;
-    const totalGrowth = finalBalance - totalContributions - totalEmployerMatch;
+    const totalGrowth = finalBalance - data.currentBalance - totalContributions - totalEmployerMatch;
 
     // Tax considerations
     const calculateTaxBenefits = () => {
-      const currentTaxRate = 0.22; // Assume 22% bracket
-      const retirementTaxRate = 0.18; // Assume lower bracket in retirement
+      const currentTaxRate = calculateMarginalTaxRate(data.annualIncome);
+      const retirementTaxRate = Math.max(0.1, currentTaxRate - 0.04); // Assume lower bracket in retirement
       
       const traditionalSavings = totalTradContributions * currentTaxRate;
       const rothCost = totalRothContributions * currentTaxRate; // Tax paid upfront
@@ -112,17 +135,14 @@ export const useEnhanced401kCalculations = (data: FourOhOneKData) => {
     const taxBenefits = calculateTaxBenefits();
 
     // National comparison
-    const getAgeGroup = (age: number): keyof typeof NATIONAL_AVERAGES.averageBalance => {
-      if (age < 30) return '20s';
-      if (age < 40) return '30s';
-      if (age < 50) return '40s';
-      if (age < 60) return '50s';
-      return '60s';
-    };
-
+    const ageGroup = getAgeGroup(data.currentAge);
+    const averageBalanceForAge = NATIONAL_AVERAGES.averageBalance[ageGroup];
+    
     const nationalComparison = {
-      balancePercentile: (data.currentBalance / NATIONAL_AVERAGES.averageBalance[getAgeGroup(data.currentAge)]) * 100,
-      contributionPercentile: (contributionPercent / NATIONAL_AVERAGES.contributionRate) * 100
+      balancePercentile: averageBalanceForAge > 0 ? 
+        Math.min(100, (data.currentBalance / averageBalanceForAge) * 50) : 50,
+      contributionPercentile: NATIONAL_AVERAGES.contributionRate > 0 ? 
+        Math.min(100, (contributionPercent / NATIONAL_AVERAGES.contributionRate) * 50) : 50
     };
 
     return {
@@ -150,13 +170,15 @@ export const useEnhanced401kCalculations = (data: FourOhOneKData) => {
   const retirementIncome = useMemo((): RetirementIncome => {
     const monthlyWithdrawal = (calculations.finalBalance * 0.04) / 12; // 4% rule
     const totalMonthlyIncome = monthlyWithdrawal + data.socialSecurityEstimate;
-    const replacementRatio = (totalMonthlyIncome * 12) / data.annualIncome * 100;
+    const replacementRatio = data.annualIncome > 0 ? 
+      (totalMonthlyIncome * 12) / data.annualIncome * 100 : 0;
     
     return {
       monthlyWithdrawal,
       totalMonthlyIncome,
       replacementRatio,
-      socialSecurityPortion: (data.socialSecurityEstimate / totalMonthlyIncome) * 100
+      socialSecurityPortion: totalMonthlyIncome > 0 ? 
+        (data.socialSecurityEstimate / totalMonthlyIncome) * 100 : 0
     };
   }, [calculations.finalBalance, data.socialSecurityEstimate, data.annualIncome]);
 
@@ -176,7 +198,7 @@ export const useEnhanced401kCalculations = (data: FourOhOneKData) => {
       color: 'success', 
       message: `Good progress at ${contributionPercent.toFixed(1)}%. Consider increasing to ${recommendedRate}% for optimal results.`
     };
-    if (contributionPercent >= data.employerMatchLimit) return { 
+    if (contributionPercent >= data.employerMatchLimit && data.employerMatchLimit > 0) return { 
       level: 'Fair', 
       color: 'warning', 
       message: `You're capturing the employer match. Try to increase beyond ${contributionPercent.toFixed(1)}%.`
@@ -206,14 +228,17 @@ export const useEnhanced401kCalculations = (data: FourOhOneKData) => {
 
   // Helper function for fee calculations
   const calculateFutureValueWithFees = useCallback((feeRate: number) => {
+    if (calculations.yearsToRetirement <= 0) return data.currentBalance;
+    
     let balance = data.currentBalance;
     let yearlyContribution = data.monthlyContribution * 12;
-    const netReturn = (data.estimatedReturn - feeRate) / 100;
+    const netReturn = Math.max(0, (data.estimatedReturn - feeRate) / 100);
     const yearsToRetirement = data.retirementAge - data.currentAge;
     
     // Calculate employer match
     const baseContribution = data.monthlyContribution * 12;
-    const maxEmployerMatch = (data.annualIncome * data.employerMatchLimit / 100) * (data.employerMatch / 100);
+    const maxEmployerMatch = data.annualIncome > 0 ? 
+      (data.annualIncome * data.employerMatchLimit / 100) * (data.employerMatch / 100) : 0;
     const currentEmployerMatch = Math.min(
       baseContribution * (data.employerMatch / 100),
       maxEmployerMatch
@@ -223,55 +248,138 @@ export const useEnhanced401kCalculations = (data: FourOhOneKData) => {
       balance = balance * (1 + netReturn);
       balance += yearlyContribution + currentEmployerMatch;
       
-      if (data.includeInflation) {
+      if (data.includeInflation && data.incomeGrowthRate > 0) {
         yearlyContribution *= (1 + data.incomeGrowthRate / 100);
       }
     }
     
     return balance;
-  }, [data.currentBalance, data.monthlyContribution, data.estimatedReturn, data.retirementAge, data.currentAge, data.annualIncome, data.employerMatchLimit, data.employerMatch, data.includeInflation, data.incomeGrowthRate]);
+  }, [data, calculations.yearsToRetirement]);
 
   // Fee impact analysis
   const feeImpact = useMemo(() => {
     const withoutFees = calculateFutureValueWithFees(0);
     const withFees = calculations.finalBalance;
-    return withoutFees - withFees;
+    return Math.max(0, withoutFees - withFees);
   }, [calculateFutureValueWithFees, calculations.finalBalance]);
 
   // Generate recommendations
   const recommendations = useMemo(() => {
     const recs = [];
     
+    // Contribution rate recommendations
     if (calculations.contributionPercent < 15) {
-      recs.push(`Increase contribution rate to 15%+ for optimal retirement savings (currently ${calculations.contributionPercent.toFixed(1)}%)`);
+      recs.push({
+        type: 'contribution',
+        priority: 'high',
+        message: `Increase contribution rate to 15%+ for optimal retirement savings (currently ${calculations.contributionPercent.toFixed(1)}%)`
+      });
     }
     
-    if (calculations.currentEmployerMatch < calculations.maxEmployerMatch) {
-      recs.push(`Missing $${(calculations.maxEmployerMatch - calculations.currentEmployerMatch).toLocaleString()} in annual employer match`);
+    // Employer match recommendations
+    if (calculations.currentEmployerMatch < calculations.maxEmployerMatch && calculations.maxEmployerMatch > 0) {
+      const missedAmount = calculations.maxEmployerMatch - calculations.currentEmployerMatch;
+      recs.push({
+        type: 'employer_match',
+        priority: 'critical',
+        message: `Missing ${missedAmount.toLocaleString()} in annual employer match - increase contribution to ${data.employerMatchLimit}%`
+      });
     }
     
+    // Fee recommendations
     if (data.totalFees > 1.5) {
-      recs.push(`High fees (${data.totalFees}%) - consider lower-cost funds`);
+      recs.push({
+        type: 'fees',
+        priority: 'medium',
+        message: `High fees (${data.totalFees}%) could cost ${feeImpact.toLocaleString()} over time - consider lower-cost funds`
+      });
     }
     
+    // Income replacement recommendations
     if (retirementIncome.replacementRatio < 70) {
-      recs.push(`Projected ${retirementIncome.replacementRatio.toFixed(0)}% income replacement may be insufficient`);
+      recs.push({
+        type: 'income_replacement',
+        priority: 'high',
+        message: `Projected ${retirementIncome.replacementRatio.toFixed(0)}% income replacement may be insufficient (target: 70-80%)`
+      });
     }
     
+    // Catch-up contribution recommendations
     if (data.currentAge >= 50 && !data.includeCatchUp) {
-      recs.push('Consider catch-up contributions - you can contribute an extra $7,500 annually');
+      recs.push({
+        type: 'catch_up',
+        priority: 'medium',
+        message: `Consider catch-up contributions - you can contribute an extra ${CONTRIBUTION_LIMITS.catchUp.toLocaleString()} annually`
+      });
     }
     
+    // National comparison recommendations
     if (calculations.nationalComparison.balancePercentile < 50) {
-      recs.push('Your balance is below national average for your age group');
+      recs.push({
+        type: 'balance',
+        priority: 'medium',
+        message: 'Your balance is below national average for your age group - consider increasing contributions'
+      });
     }
     
-    if (data.accountType === 'traditional' && data.currentAge < 40) {
-      recs.push('Consider Roth 401(k) for tax diversification');
+    // Tax strategy recommendations
+    if (data.accountType === 'traditional' && data.currentAge < 40 && data.annualIncome < 100000) {
+      recs.push({
+        type: 'tax_strategy',
+        priority: 'low',
+        message: 'Consider Roth 401(k) for tax diversification - pay taxes now while in a lower bracket'
+      });
+    }
+    
+    // High earner recommendations
+    if (data.annualIncome > 150000 && calculations.contributionPercent < 20) {
+      recs.push({
+        type: 'high_earner',
+        priority: 'medium',
+        message: 'As a high earner, consider maximizing 401(k) contributions for significant tax benefits'
+      });
     }
     
     return recs;
-  }, [calculations, data, retirementIncome]);
+  }, [calculations, data, retirementIncome, feeImpact]);
+
+  // Scenario analysis
+  const scenarioAnalysis = useMemo(() => {
+    const scenarios = [];
+    
+    // Increase contribution by 1%
+    const increaseContribution = {
+      name: 'Increase contribution by 1%',
+      change: '+1% contribution',
+      impact: calculateFutureValueWithFees(data.totalFees) * 0.15, // Rough estimate
+      description: 'Small increase with significant long-term impact'
+    };
+    scenarios.push(increaseContribution);
+    
+    // Maximize employer match
+    if (calculations.currentEmployerMatch < calculations.maxEmployerMatch) {
+      const maximizeMatch = {
+        name: 'Maximize employer match',
+        change: `Contribute ${data.employerMatchLimit}%`,
+        impact: (calculations.maxEmployerMatch - calculations.currentEmployerMatch) * calculations.yearsToRetirement * 2,
+        description: 'Free money from your employer'
+      };
+      scenarios.push(maximizeMatch);
+    }
+    
+    // Reduce fees by 0.5%
+    if (data.totalFees > 1) {
+      const reduceFees = {
+        name: 'Reduce fees by 0.5%',
+        change: 'Switch to lower-cost funds',
+        impact: feeImpact * 0.5,
+        description: 'Lower costs mean more money working for you'
+      };
+      scenarios.push(reduceFees);
+    }
+    
+    return scenarios;
+  }, [calculations, data, feeImpact, calculateFutureValueWithFees]);
 
   return {
     calculations,
@@ -280,6 +388,7 @@ export const useEnhanced401kCalculations = (data: FourOhOneKData) => {
     chartData,
     feeImpact,
     recommendations,
+    scenarioAnalysis,
     calculateFutureValueWithFees
   };
 };

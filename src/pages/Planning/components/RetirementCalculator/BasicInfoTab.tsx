@@ -29,7 +29,7 @@ const BasicInfoTab: FC<BasicInfoTabProps> = ({ inputs, onInputChange }) => {
   return (
     <Grid container spacing={4}>
       <Grid item xs={12} md={6}>
-        <Paper elevation={2} className="p-4">
+        <Paper elevation={2} className="p-7">
           <Typography variant="h6" className="mb-4" sx={{ display: 'flex', alignItems: 'center' }}>
             <TimelineIcon className="mr-2" color="primary" />
             Personal Information
@@ -122,7 +122,7 @@ const BasicInfoTab: FC<BasicInfoTabProps> = ({ inputs, onInputChange }) => {
       </Grid>
       
       <Grid item xs={12} md={6}>
-        <Paper elevation={2} className="p-4">
+        <Paper elevation={2} className="p-7">
           <Typography variant="h6" className="mb-4" sx={{ display: 'flex', alignItems: 'center' }}>
             <MoneyIcon className="mr-2" color="primary" />
             Savings & Investments

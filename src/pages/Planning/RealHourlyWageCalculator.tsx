@@ -123,7 +123,7 @@ const RealHourlyWageCalculator: FC = () => {
           Real Hourly Wage Calculator
         </Typography>
         
-        <Typography variant="body1" className="mb-6 text-center text-gray-600 max-w-3xl mx-auto">
+        <Typography variant="body1" className="mb-6 text-center text-gray-600">
           Discover your true hourly earnings by factoring in commuting time, work expenses, taxes, and preparation time. 
           See what you really make per hour of your life committed to work.
         </Typography>

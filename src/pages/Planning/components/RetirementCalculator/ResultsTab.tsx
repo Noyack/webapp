@@ -317,7 +317,7 @@ const ResultsTab: FC<ResultsTabProps> = ({ inputs, results, onAdjustToMeetGoal, 
             <Typography variant="h6" className="mb-4">Savings Growth Over Time</Typography>
             <Box className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={results.yearlySavingsChart}>
+                <AreaChart data={results.yearlySavingsChart} margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="age" />
                   <YAxis tickFormatter={(value) => formatCurrency(value)} />
@@ -354,7 +354,7 @@ const ResultsTab: FC<ResultsTabProps> = ({ inputs, results, onAdjustToMeetGoal, 
             <Typography variant="h6" className="mb-4">Retirement Income Sources</Typography>
             <Box className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
                   <Pie
                     data={[
                       { name: 'Investment Withdrawals', value: (results.projectedSavings * 0.04) / 12 },
@@ -364,7 +364,7 @@ const ResultsTab: FC<ResultsTabProps> = ({ inputs, results, onAdjustToMeetGoal, 
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    // label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
@@ -373,6 +373,7 @@ const ResultsTab: FC<ResultsTabProps> = ({ inputs, results, onAdjustToMeetGoal, 
                       <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                     ))}
                   </Pie>
+                  <Legend />
                   <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
                 </PieChart>
               </ResponsiveContainer>
@@ -384,11 +385,11 @@ const ResultsTab: FC<ResultsTabProps> = ({ inputs, results, onAdjustToMeetGoal, 
       {/* Retirement Income vs Expenses Chart */}
       <Grid container spacing={4} className="mb-6">
         <Grid item xs={12}>
-          <Paper elevation={2} className="p-4">
+          <Paper elevation={2} className="p-7">
             <Typography variant="h6" className="mb-4">Retirement Income vs Expenses</Typography>
             <Box className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={results.retirementIncomeChart}>
+                <LineChart data={results.retirementIncomeChart} margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="age" />
                   <YAxis tickFormatter={(value) => formatCurrency(value)} />
@@ -431,7 +432,7 @@ const ResultsTab: FC<ResultsTabProps> = ({ inputs, results, onAdjustToMeetGoal, 
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    // label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
@@ -441,6 +442,7 @@ const ResultsTab: FC<ResultsTabProps> = ({ inputs, results, onAdjustToMeetGoal, 
                     ))}
                   </Pie>
                   <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+                    <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </Box>

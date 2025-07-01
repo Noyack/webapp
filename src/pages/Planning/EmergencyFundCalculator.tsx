@@ -197,7 +197,7 @@ const EmergencyFundCalculator: React.FC = () => {
         Emergency Fund Calculator
       </Typography>
       
-      <Typography variant="body1" className="mb-6 text-center text-gray-600 max-w-3xl mx-auto">
+      <Typography variant="body1" className="mb-6 text-center text-gray-600 ">
         Build the perfect emergency fund based on your unique situation, risk factors, and financial goals.
       </Typography>
 
@@ -297,6 +297,7 @@ const EmergencyFundCalculator: React.FC = () => {
                     <Typography variant="subtitle1" gutterBottom>
                       Emergency Fund Target: {data.targetMonths} months
                     </Typography>
+                    <Box maxWidth={"500px"}>
                     <Slider
                       value={data.targetMonths}
                       onChange={(_, value) => updateData('targetMonths', value)}
@@ -306,10 +307,12 @@ const EmergencyFundCalculator: React.FC = () => {
                       marks={[
                         { value: 3, label: '3 months' },
                         { value: 6, label: '6 months' },
+                        { value: 9, label: '9 months' },
                         { value: 12, label: '12 months' }
                       ]}
                       valueLabelDisplay="auto"
-                    />
+                      />
+                      </Box>
                     <Typography variant="caption" color="text.secondary">
                       Recommended: {recommendedMonths} months based on your risk profile
                     </Typography>
@@ -358,7 +361,7 @@ const EmergencyFundCalculator: React.FC = () => {
                   {/* Safety Net Analysis */}
                   <Box sx={{ mt: 3 }}>
                     <Typography variant="subtitle1" gutterBottom>Total Safety Net</Typography>
-                    <TableContainer component={Paper} size="small">
+                    <TableContainer >
                       <Table>
                         <TableHead>
                           <TableRow>
@@ -513,21 +516,23 @@ const EmergencyFundCalculator: React.FC = () => {
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle1" gutterBottom>Employment & Income</Typography>
                   
-                  <Box sx={{ mb: 3 }}>
+                  <Box sx={{ mb: 3 }} display={"flex"} flexDirection={"column"}>
                     <Typography variant="body2" gutterBottom>Job Security Level</Typography>
-                    <Slider
-                      value={data.jobSecurity}
-                      onChange={(_, value) => updateData('jobSecurity', value)}
-                      min={1}
-                      max={5}
-                      step={1}
-                      marks={[
-                        { value: 1, label: 'Very Low' },
-                        { value: 3, label: 'Average' },
-                        { value: 5, label: 'Very High' }
-                      ]}
-                      valueLabelDisplay="auto"
-                    />
+                    <Box minWidth={"280px"} maxWidth={"500px"} alignSelf={"center"}>
+                      <Slider
+                        value={data.jobSecurity}
+                        onChange={(_, value) => updateData('jobSecurity', value)}
+                        min={1}
+                        max={5}
+                        step={1}
+                        marks={[
+                          { value: 1, label: 'Very Low' },
+                          { value: 3, label: 'Average' },
+                          { value: 5, label: 'Very High' }
+                        ]}
+                        valueLabelDisplay="auto"
+                        />
+                    </Box>
                   </Box>
 
                   <FormControl fullWidth sx={{ mb: 2 }}>

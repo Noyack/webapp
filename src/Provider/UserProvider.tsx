@@ -1,10 +1,10 @@
 // UserProvider.tsx
 import { PropsWithChildren, useState } from 'react';
-import { Subscriptions, User } from '../types';
+import { Subscriptions, UserInfo } from '../types';
 import { UserContext } from '../context/UserContext';
 
 export const UserProvider = ({ children }: PropsWithChildren) => {
-  const [userInfo, setUserInfo] = useState<User | undefined>(undefined);
+  const [userInfo, setUserInfo] = useState<UserInfo | undefined>(undefined);
   const [subs, setSubs] = useState<Subscriptions | undefined>(undefined);
   
   return (

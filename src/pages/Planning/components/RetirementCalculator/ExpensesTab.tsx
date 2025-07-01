@@ -22,7 +22,8 @@ import {
   Pie,
   Cell,
   ResponsiveContainer,
-  Tooltip as RechartsTooltip
+  Tooltip as RechartsTooltip,
+  Legend
 } from 'recharts';
 import { RetirementInputs, CHART_COLORS } from '../../../../types/retirement';
 import { formatCurrency, getTotalMonthlyExpenses } from '../../../../utils/retirementCalculations';
@@ -172,7 +173,7 @@ const ExpensesTab: FC<ExpensesTabProps> = ({ inputs, onExpenseChange, onCalculat
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  // label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -184,6 +185,7 @@ const ExpensesTab: FC<ExpensesTabProps> = ({ inputs, onExpenseChange, onCalculat
                   }
                 </Pie>
                 <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Legend />
               </PieChart>
             </ResponsiveContainer>
           </Box>
