@@ -7,7 +7,8 @@ import { UpcomingEvents } from '../../../components/UI/UpcomingEvents';
 import { 
   Article, 
   CommunityProps 
-} from '../../../types' // Import types
+} from '../../../types'
+import { usePermissions } from '../../../hooks/usePermissions'
 
 // SVG component for the share button
 const ShareBtn = () => (
@@ -17,6 +18,8 @@ const ShareBtn = () => (
 )
 
 const Academy = ({ events, referralCode, fetching }: CommunityProps = {}) => {
+  const { hasPermission } = usePermissions()
+
   // Set up state for articles
   const [articles] = useState<Article[]>([
     {
@@ -56,7 +59,9 @@ const Academy = ({ events, referralCode, fetching }: CommunityProps = {}) => {
 
   return (
     <Box className="flex flex-col gap-8 w-full ">
-      <div className='w-full  flex flex-col flex-wrap'>
+      {hasPermission("academy", "access") && (
+        <>
+        <div className='w-full  flex flex-col flex-wrap'>
         <Typography variant='h2' fontSize={"24px"} fontWeight={'medium'}>
           Noyack Academy
         </Typography>
@@ -82,13 +87,13 @@ const Academy = ({ events, referralCode, fetching }: CommunityProps = {}) => {
             <div className='flex flex-col gap-2'>
               <Typography 
                 variant='h3' 
-                maxWidth={"15ch"} 
-                fontSize={"18px"} 
+                maxWidth={"15ch"}
+                fontSize={"18px"}
                 fontWeight={500}
               >
                 {article.title}
               </Typography>
-              <Typography 
+              <Typography
                 variant='caption' 
                 className='text-gray-500 max-w-[20ch]'
               >
@@ -98,6 +103,8 @@ const Academy = ({ events, referralCode, fetching }: CommunityProps = {}) => {
           </div>
         ))}
       </div>
+      </>
+      )}
       
       <div className='flex flex-wrap gap-5 w-full justify-center'>
         <Box  

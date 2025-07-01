@@ -15,6 +15,7 @@ import { UserContext } from "../../context/UserContext";
 import TabPanel from '@mui/lab/TabPanel';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
+import { FeatureGateComponent } from "../../components/FeatureGateComponent";
 
 
 interface TabPanelProps {
@@ -102,11 +103,10 @@ function Wealthview() {
                         </div>
                     </div>
                     <div className={`${isMobile ? 'relative mt-4' : 'absolute top-5 right-5'}`}>
-                        {subs?.plan != 'free' && 
-                            <div className="flex items-center gap-2">
-                                Connect with <PlaidLinkButton />
-                            </div>
-                        }
+                        <FeatureGateComponent feature="plaid" action="connect">
+                                <PlaidLinkButton />
+                        </FeatureGateComponent>
+                        
                     </div>
                 <div className="flex flex-col justify-center">
                     <Typography textAlign={'center'}>Wealth IQ score: <span className="font-bold">{iq?iq:"Complete the IQ test to view your first score"}</span></Typography>

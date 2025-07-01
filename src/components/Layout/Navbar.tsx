@@ -12,11 +12,13 @@ import { ViewContext } from "../../context/ViewContext";
 import { PiBooksFill } from "react-icons/pi";
 import { IoWallet } from "react-icons/io5";
 import { RiRefund2Fill } from "react-icons/ri";
+import { usePermissions } from "../../hooks/usePermissions";
 
 
 
 
 function LearnNav (){
+   const { hasPermission } = usePermissions();
   return(
     <div className="space-y-2 flex flex-col text-black gap-5">
         <Link to="/" className="flex p-2 hover:bg-gray-100 rounded gap-1">
@@ -39,11 +41,13 @@ function LearnNav (){
         <PiBooksFill style={{width:28, height:28}} />
         Library
         </Link>
-        <Link to="https://academy.wearenoyack.com" className="flex p-2 hover:bg-gray-100 rounded gap-1">
         {/* <Article /> */}
-        <HiAcademicCap style={{width:28, height:28}} />
-        Academy
-        </Link>
+        {hasPermission("academy", "access") && (
+          <Link to="https://academy.wearenoyack.com" className="flex p-2 hover:bg-gray-100 rounded gap-1">
+            <HiAcademicCap style={{width:28, height:28}} />
+            Academy
+          </Link>
+        )}
         
       </div>
   )
@@ -78,6 +82,8 @@ function InvestNav (){
 
 export default function Navbar() {
   const { view } = useContext(ViewContext)
+  const {hasPermission} = usePermissions()
+
   const myview = view.view 
   return (
     <nav id="navigation" className="fixed left-0 top-0 h-screen w-57 shadow-lg p-4 flex flex-col gap-10 bg-white text-[#5D5D5D]">
@@ -87,14 +93,19 @@ export default function Navbar() {
           <img src={Logo} className="w-[150px]"/>
         </Link>
       </div>
-      <div className="flex justify-center">
+      {hasPermission("investor", "access") && (
+
+        <div className="flex justify-center">
         <ViewToggle />
       </div>
+      )}
+
       {/* Navigation Links */}
       <div  className="flex flex-col h-full justify-between">
         {myview==="Learn" &&<LearnNav />}
-        {myview==="Invest" &&<InvestNav />}
-      
+      {hasPermission("investor", "access") && (
+        myview==="Invest" &&<InvestNav />
+      )}
       <div className="text-black">
       <Link to="/wealthview" className="flex p-2 hover:bg-gray-100 rounded gap-1">
         {/* <Article /> */}

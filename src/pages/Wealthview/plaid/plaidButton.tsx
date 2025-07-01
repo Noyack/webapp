@@ -1,8 +1,9 @@
 import { useCallback, useState, useEffect, useContext } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
 import { UserContext } from '../../../context/UserContext';
-import { Button, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import wealthViewService from '../../../services/wealthView.service';
+import { usePermissions } from '../../../hooks/usePermissions';
 
 
 
@@ -14,11 +15,14 @@ const PlaidLogo = () =>{
 }
 
 const PlaidLinkButton = () => {
+  const { hasPermission, getUpgradeInfo } = usePermissions();
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [userToken, setUserToken] = useState<string|null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { userInfo } = useContext(UserContext);
+  const canUsePlaid = hasPermission("plaid", "connect");
+  const upgradeInfo = getUpgradeInfo("plaid", "connect");
 
   // First get a user token (required for income verification)
   useEffect(() => {
@@ -102,6 +106,26 @@ const PlaidLinkButton = () => {
     },
   });
 
+  if (!canUsePlaid) {
+    return (
+      <Box className="text-center p-4">
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {upgradeInfo?.message}
+        </Typography>
+        <Button 
+          variant="outlined" 
+          color="primary"
+          onClick={() => {
+            // Navigate to upgrade page
+            window.location.href = '/upgrade';
+          }}
+        >
+          Upgrade to Connect Banks
+        </Button>
+      </Box>
+    );
+  }
+
   if (error) {
     return (
       <div className="text-red-600 mb-4 flex flex-col align-middle">
@@ -119,6 +143,8 @@ const PlaidLinkButton = () => {
   }
 
   return (
+    <div className="flex items-center gap-2">
+      Connect with 
     <Button 
       onClick={() => open()} 
       disabled={!ready || isLoading}
@@ -126,10 +152,12 @@ const PlaidLinkButton = () => {
       sx={{background:"#000", borderRadius:"50px",color:"#fff", width:"15ch"}}
     >
       {isLoading ? 'Preparing...' : 
+
       <Typography fontSize={"14px"}>
         <PlaidLogo />
       </Typography>}
     </Button>
+      </div>
   );
 };
 

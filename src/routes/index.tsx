@@ -2,6 +2,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { Suspense, lazy, useEffect, FC } from 'react';
 import { preloadComponent, preloadRoutes } from '../utils/preload';
+import { ProtectedRoute } from './ProtectedRoutes';
 
 // Lazy load all page components with preloading
 const Account = lazy(() => import('../pages/EAccount/EAccount'));
@@ -62,7 +63,9 @@ const AppRoutes: FC = () => {
         path="/invest" 
         element={
           <Suspense fallback={<LoadingSpinner />}>
-            <InvestWithPreload />
+            <ProtectedRoute feature='investor' action='access'>
+              <InvestWithPreload />
+            </ProtectedRoute>
           </Suspense>
         } 
       />
@@ -70,7 +73,9 @@ const AppRoutes: FC = () => {
         path="/account" 
         element={
           <Suspense fallback={<LoadingSpinner />}>
-            <Account />
+            <ProtectedRoute feature='investor' action='access'>
+              <Account />
+            </ProtectedRoute>
           </Suspense>
         } 
       />
@@ -78,7 +83,9 @@ const AppRoutes: FC = () => {
         path="/funding" 
         element={
           <Suspense fallback={<LoadingSpinner />}>
-            <IRAFunding />
+            <ProtectedRoute feature='investor' action='access'>
+              <IRAFunding />
+            </ProtectedRoute>'
           </Suspense>
         } 
       />
@@ -86,7 +93,9 @@ const AppRoutes: FC = () => {
         path="/wallet" 
         element={
           <Suspense fallback={<LoadingSpinner />}>
+            <ProtectedRoute feature='investor' action='access'>
             <Wallet />
+            </ProtectedRoute>
           </Suspense>
         } 
       />

@@ -24,7 +24,6 @@ export interface User {
   imageUrl: string;
 }
 export interface UserInfo {
-  [x: string]: string;
   id: string;
   firstName: string | null;
   lastName: string | null;
@@ -41,7 +40,7 @@ export interface UserInfo {
   imageUrl: string;
 }
 
-export type Subs = "free" | "community" | "inverstor";
+export type SubscriptionPlan = "free" | "community" | "investor";
 
 export interface Subscriptions{
   id: string,
@@ -49,7 +48,7 @@ export interface Subscriptions{
   stripeCustomerId: string | null,
   stripeSubscriptionId: string | null,
   status: boolean,
-  plan: Subs,
+  plan: SubscriptionPlan,
   currentPeriodStart: any ,
   currentPeriodEnd: any,
   createdAt: any,
@@ -58,6 +57,142 @@ export interface Subscriptions{
 }
 
 export type subArr = Subscriptions[]
+
+export interface Permission {
+  feature: string;
+  action: string;
+  plans: SubscriptionPlan[];
+}
+
+export interface FeatureGate {
+  isAllowed: boolean;
+  userPlan: SubscriptionPlan;
+  requiredPlans: SubscriptionPlan[];
+  upgradeMessage?: string;
+}
+
+  export const PERMISSIONS: Permission[] = [
+
+  {
+    feature: "investor",
+    action: "access",
+    plans: ["investor"]
+  },
+
+  // PLAID INTEGRATION - Bank connections
+  {
+    feature: "plaid",
+    action: "connect",           // Connect bank accounts
+    plans: ["community", "investor"]
+  },
+  {
+    feature: "plaid",
+    action: "view_transactions", // See transaction history
+    plans: ["community", "investor"]
+  },
+  {
+    feature: "plaid",
+    action: "investment_data",   // Access investment/holdings data
+    plans: ["investor"]
+  },
+
+  // CALCULATORS - Different complexity levels
+  {
+    feature: "calculators",
+    action: "basic",            // Retirement & Debt calculators (dashboard)
+    plans: ["free", "community", "investor"]
+  },
+  {
+    feature: "calculators",
+    action: "advanced",         // FIRE, Tax optimization, complex tools
+    plans: ["community", "investor"]
+  },
+  {
+    feature: "calculators",
+    action: "unlimited",        // No usage limits
+    plans: ["investor"]
+  },
+
+  // WEALTH DASHBOARD - Progressive access
+  {
+    feature: "wealth_dashboard",
+    action: "view",             // Basic wealth overview
+    plans: ["community", "investor"]
+  },
+  {
+    feature: "wealth_dashboard",
+    action: "detailed_analysis", // Full breakdowns, insights
+    plans: ["investor"]
+  },
+  {
+    feature: "wealth_dashboard",
+    action: "export",           // Export reports/data
+    plans: ["investor"]
+  },
+
+  // ACADEMY - Content tiers
+  {
+    feature: "academy",
+    action: "access",    // Free courses
+    plans: ["community", "investor"]
+  },
+
+  // PORTFOLIO ANALYSIS
+  {
+    feature: "portfolio",
+    action: "view",             // See holdings
+    plans: ["community", "investor"]
+  },
+  {
+    feature: "portfolio",
+    action: "analyze",          // Performance analysis, recommendations
+    plans: ["investor"]
+  },
+  {
+    feature: "portfolio",
+    action: "rebalance",        // Auto-rebalancing suggestions
+    plans: ["investor"]
+  },
+
+  // SUPPORT - Service levels
+  {
+    feature: "support",
+    action: "basic",            // FAQ, standard tickets
+    plans: ["free", "community", "investor"]
+  },
+  {
+    feature: "support",
+    action: "priority",         // Faster response times
+    plans: ["community", "investor"]
+  },
+  {
+    feature: "support",
+    action: "phone",            // Phone support
+    plans: ["investor"]
+  },
+
+  // REPORTS & EXPORTS
+  {
+    feature: "reports",
+    action: "view",             // Basic reports
+    plans: ["community", "investor"]
+  },
+  {
+    feature: "reports",
+    action: "download",         // Download PDFs
+    plans: ["investor"]
+  },
+  {
+    feature: "reports",
+    action: "custom",           // Custom date ranges, filters
+    plans: ["investor"]
+  },
+  {
+    feature: "reports",
+    action: "custom",           // Custom date ranges, filters
+    plans: ["investor"]
+  }
+];
 
 export interface ClerkEmailObject {
   id: string;
