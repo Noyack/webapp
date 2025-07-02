@@ -5,8 +5,9 @@ import { preloadComponent, preloadRoutes } from '../utils/preload';
 import { ProtectedRoute } from './ProtectedRoutes';
 
 // Lazy load all page components with preloading
-const Account = lazy(() => import('../pages/EAccount/EAccount'));
+const Account = lazy(() => import('../pages/Account/Account'));
 const Dashboard = lazy(preloadComponent(() => import('../pages/Dashboard/Dashboard')));
+const EAccount = lazy(() => import('../pages/EAccount/EAccount'));
 const Events = lazy(() => import('../pages/Events/Events'));
 const Invest = lazy(preloadComponent(() => import('../pages/Invest/Invest')));
 const IRAFunding = lazy(preloadComponent(() => import('../pages/IRAFunding/IRAFunding')));
@@ -59,6 +60,7 @@ const AppRoutes: FC = () => {
           </Suspense>
         } 
       />
+      
       <Route 
         path="/invest" 
         element={
@@ -74,7 +76,7 @@ const AppRoutes: FC = () => {
         element={
           <Suspense fallback={<LoadingSpinner />}>
             <ProtectedRoute feature='investor' action='access'>
-              <Account />
+              <EAccount />
             </ProtectedRoute>
           </Suspense>
         } 
@@ -144,6 +146,14 @@ const AppRoutes: FC = () => {
         element={
           <Suspense fallback={<LoadingSpinner />}>
             <Support />
+          </Suspense>
+        } 
+      />
+      <Route 
+        path="/profile" 
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <Account />
           </Suspense>
         } 
       />

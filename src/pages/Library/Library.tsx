@@ -1,6 +1,7 @@
 import { Box, Tab, Tabs } from "@mui/material";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import FinancialGlossary from "./FinancialGlossary";
+import Ebook from "./Ebook";
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -113,6 +114,7 @@ function Library() {
                               }}
                           >
                               <Tab label="Glossary" {...a11yProps(0)} />
+                              <Tab label="Ebook" {...a11yProps(1)} />
                           </Tabs>
                       </div>
                       
@@ -124,6 +126,9 @@ function Library() {
 
                   <CustomTabPanel value={value} index={0}>
                     <FinancialGlossary />
+                  </CustomTabPanel>
+                  <CustomTabPanel value={value} index={1}>
+                    <Ebook />
                   </CustomTabPanel>
       </>
     )

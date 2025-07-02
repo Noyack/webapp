@@ -27,6 +27,7 @@ export interface UserInfo {
   id: string;
   firstName: string | null;
   lastName: string | null;
+  email?: string;
   emailAddresses: Array<{
     id: string;
     emailAddress: string;

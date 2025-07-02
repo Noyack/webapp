@@ -21,7 +21,7 @@ function LearnNav() {
     const isActive = location.pathname === path;
     return `flex p-2 rounded gap-1 transition-colors duration-200 ${
       isActive 
-        ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-500' 
+        ? 'bg-blue-900 text-white border-r-4 border-blue-500' 
         : 'hover:bg-gray-100 text-black'
     }`;
   };
@@ -70,7 +70,7 @@ function InvestNav() {
     const isActive = location.pathname === path;
     return `flex p-2 rounded gap-1 transition-colors duration-200 ${
       isActive 
-        ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-500' 
+        ? 'bg-blue-900 text-white border-r-4 border-blue-500' 
         : 'hover:bg-gray-100 text-black'
     }`;
   };
@@ -112,7 +112,7 @@ export default function Navbar() {
     const isActive = location.pathname === path;
     return `flex p-2 rounded gap-1 transition-colors duration-200 ${
       isActive 
-        ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-500' 
+        ? 'bg-blue-900 text-white border-r-4 border-blue-500' 
         : 'hover:bg-gray-100 text-black'
     }`;
   };
