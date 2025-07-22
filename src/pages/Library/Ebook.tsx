@@ -98,7 +98,7 @@ const Ebook = () => {
                       className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1 transition-colors"
                       onClick={() => window.open(ebook.downloadLink, '_blank')}
                     >
-                      Download <ArrowRight size={16} />
+                      View <ArrowRight size={16} />
                     </button>
                   </div>
                 </div>

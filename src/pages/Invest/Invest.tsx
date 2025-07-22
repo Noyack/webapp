@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   Box,
   Stepper,
@@ -32,13 +32,13 @@ import {
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import { UserContext } from '../../context/UserContext';
 
 // Form data interface
 interface InvestmentFormData {
   // Step 1: Investment Details
   firstName: string;
   lastName: string;
-  email: string;
   isAccreditedInvestor: string;
   investmentAccount: string;
   iraAccountNumber: string;
@@ -125,13 +125,13 @@ const Invest: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmationNumber, setConfirmationNumber] = useState<string>('');
   const [availableCash, setAvailableCash] = useState<number>(0);
+  const { userInfo } = useContext(UserContext)
 
   const formik = useFormik<InvestmentFormData>({
     initialValues: {
       // Step 1
-      firstName: '',
-      lastName: '',
-      email: '',
+      firstName: userInfo?.firstName || "",
+      lastName: userInfo?.lastName || "",
       isAccreditedInvestor: '',
       investmentAccount: '',
       iraAccountNumber: '',
@@ -195,7 +195,7 @@ const Invest: React.FC = () => {
   // Handle next button click
   const handleNext = async () => {
     // Trigger validation for current step
-    const errors = await formik.validateForm();
+    // const errors = await formik.validateForm();
     
     // Get current step fields
     let currentStepFields: string[] = [];
@@ -211,9 +211,9 @@ const Invest: React.FC = () => {
     }
     
     // Check if current step has errors
-    const currentStepHasErrors = currentStepFields.some(field => errors[field as keyof InvestmentFormData]);
+    // const currentStepHasErrors = currentStepFields.some(field => errors[field as keyof InvestmentFormData]);
     
-    if (currentStepHasErrors) {
+    // if (currentStepHasErrors) {
       // Mark fields as touched to show errors
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const touchedFields: any = {};
@@ -222,7 +222,7 @@ const Invest: React.FC = () => {
       });
       formik.setTouched({ ...formik.touched, ...touchedFields });
       return;
-    }
+    // }
     
     // If no errors, proceed to next step
     if (activeStep < 3) {
@@ -285,22 +285,6 @@ const Invest: React.FC = () => {
                   helperText={formik.touched.lastName && formik.errors.lastName}
                   required
                   inputProps={{ 'aria-label': 'Last Name' }}
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  name="email"
-                  label="Email"
-                  type="email"
-                  value={formik.values.email}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.email && Boolean(formik.errors.email)}
-                  helperText={formik.touched.email && formik.errors.email}
-                  required
-                  inputProps={{ 'aria-label': 'Email Address' }}
                 />
               </Grid>
 

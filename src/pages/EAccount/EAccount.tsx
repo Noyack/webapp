@@ -76,6 +76,12 @@ interface FormData {
   employmentStatus: string;
   occupationCategory: string;
   occupation: string;
+
+  identificationType: string;
+  idNumber: string;
+  issueDate: string;
+  expirationDate: string;
+  stateOfIssuance: string;
   
   // Step 3: Agreements
   custodialAgreement: boolean;
@@ -121,6 +127,15 @@ const step1Schema = Yup.object({
     .matches(/^\d{3}-\d{2}-\d{4}$/, 'SSN must be in format XXX-XX-XXXX')
     .required('Social Security Number is required'),
   citizenship: Yup.string().required('Citizenship status is required'),
+  identificationType: Yup.string().required('Identification type is required'),
+  idNumber: Yup.string()
+    .min(3, 'ID number must be at least 3 characters')
+    .required('ID number is required'),
+  issueDate: Yup.date().required('Issue date is required'),
+  expirationDate: Yup.date()
+    .min(new Date(), 'Expiration date must be in the future')
+    .required('Expiration date is required'),
+  stateOfIssuance: Yup.string().required('State of issuance is required'),
 });
 
 const step2Schema = Yup.object({
@@ -175,6 +190,12 @@ const EAccount: React.FC = () => {
       employerAddress: '',
       ssn: '',
       citizenship: '',
+
+      identificationType: 'US Drivers License',
+      idNumber: '',
+      issueDate: '',
+      expirationDate: '',
+      stateOfIssuance: '',
       
       // Step 2
       iraType: '',
@@ -236,6 +257,11 @@ const EAccount: React.FC = () => {
         employerName: values.employerName,
         employerAddress: values.employerAddress,
         citizenship: values.citizenship,
+        identificationType: values.identificationType,
+        idNumber: values.idNumber,
+        issueDate: values.issueDate,
+        expirationDate: values.expirationDate,
+        stateOfIssuance: values.stateOfIssuance,
         iraType: values.iraType,
         accountPurpose: values.accountPurpose,
         initialSourceOfFunds: values.initialSourceOfFunds,
@@ -573,7 +599,7 @@ const EAccount: React.FC = () => {
                 <TextField
                   fullWidth
                   name="employerName"
-                  label="Employer Name / Income Source"
+                  label="Employer Name"
                   value={formik.values.employerName}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -590,6 +616,101 @@ const EAccount: React.FC = () => {
                   onBlur={formik.handleBlur}
                 />
               </Grid>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                Identification Information
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required>
+                <InputLabel>Identification Type</InputLabel>
+                <Select
+                  name="identificationType"
+                  value={formik.values.identificationType}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.identificationType && Boolean(formik.errors.identificationType)}
+                  label="Identification Type"
+                >
+                  <MenuItem value="US Drivers License">US Driver's License</MenuItem>
+                  <MenuItem value="US State ID">US State ID</MenuItem>
+                  <MenuItem value="US Passport">US Passport</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </Select>
+                {formik.touched.identificationType && formik.errors.identificationType && (
+                  <FormHelperText error>{formik.errors.identificationType}</FormHelperText>
+                )}
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                name="idNumber"
+                label="ID Number"
+                value={formik.values.idNumber}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.idNumber && Boolean(formik.errors.idNumber)}
+                helperText={formik.touched.idNumber && formik.errors.idNumber}
+                required
+                placeholder="Enter your ID number"
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth required>
+                <InputLabel>State of Issuance</InputLabel>
+                <Select
+                  name="stateOfIssuance"
+                  value={formik.values.stateOfIssuance}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.stateOfIssuance && Boolean(formik.errors.stateOfIssuance)}
+                  label="State of Issuance"
+                >
+                  {['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'].map((state) => (
+                    <MenuItem key={state} value={state}>{state}</MenuItem>
+                  ))}
+                </Select>
+                {formik.touched.stateOfIssuance && formik.errors.stateOfIssuance && (
+                  <FormHelperText error>{formik.errors.stateOfIssuance}</FormHelperText>
+                )}
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                name="issueDate"
+                label="Issue Date"
+                type="date"
+                value={formik.values.issueDate}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.issueDate && Boolean(formik.errors.issueDate)}
+                helperText={formik.touched.issueDate && formik.errors.issueDate}
+                required
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                name="expirationDate"
+                label="Expiration Date"
+                type="date"
+                value={formik.values.expirationDate}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.expirationDate && Boolean(formik.errors.expirationDate)}
+                helperText={formik.touched.expirationDate && formik.errors.expirationDate}
+                required
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
             </Grid>
           </>
         );

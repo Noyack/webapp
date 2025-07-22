@@ -22,7 +22,6 @@ export default function ScrollToTop() {
         ...Array.from(document.querySelectorAll('[class*="overflow"]')),
       ].filter(Boolean); // Remove null/undefined elements
 
-      console.log('Found scroll containers:', scrollContainers);
 
       // Try scrolling each container
       let scrolled = false;
@@ -43,7 +42,6 @@ export default function ScrollToTop() {
 
       // Fallback to window scroll
       if (!scrolled) {
-        console.log('Falling back to window scroll');
         window.scrollTo(0, 0);
       }
 

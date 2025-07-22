@@ -10,6 +10,11 @@ export interface AccountFormData {
   ssn: string;
   married?: boolean;
   minor?: boolean;
+  identificationType: string;
+  idNumber: string;
+  issueDate: string;
+  expirationDate: string;
+  stateOfIssuance: string;
   
   // Address Information
   legalAddress: string;
@@ -199,9 +204,9 @@ export class EquityTrustService {
   /**
    * Get user's IRA accounts
    */
-  async getAccounts(): Promise<EquityAccount[]> {
+  async getAccounts(accountNumber:string): Promise<EquityAccount[]> {
     const response: ApiResponse<{ response: EquityAccount[] }> = await apiClient.get(
-      '/equity-trust/accounts'
+      `/equity-trust/accounts/search/${accountNumber}`
     );
     return response.data.response;
   }

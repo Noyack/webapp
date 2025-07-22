@@ -12,6 +12,7 @@ import {
 } from '../../types'
 import { investmentService } from '../../services'
 import { Link } from 'react-router-dom'
+import equityTrustService from '../../services/equityTrust.service'
 
 function Overview() {
     const { user } = useUser();
@@ -37,6 +38,14 @@ function Overview() {
       totalEarnings: 0,
       availableToWithdraw: 0
     });
+
+    useEffect(()=>{
+      const test =async()=> {
+        return await equityTrustService.getAccounts("205377261")
+      }
+
+      console.log(test())
+    },[])
     
     // Using correct type for referralInfo state
     // const [referralInfo, setReferralInfo] = useState<ReferralInfo>({

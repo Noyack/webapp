@@ -1,3 +1,5 @@
+// src/pages/Events/Events.tsx - Fix the filter error
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, MapPin, Users, Play, ExternalLink, Filter, Search, Share, BookmarkPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 import Backdrop from '../../assets/NOYACK Logo transparent background .png'
@@ -40,9 +42,6 @@ interface SocialPost {
   mediaUrl?: string;
 }
 
-// Mock data - replace with actual HubSpot/API calls
-
-
 const mockSocialPosts: SocialPost[] = [
   {
     id: '1',
@@ -80,11 +79,12 @@ const mockSocialPosts: SocialPost[] = [
 ];
 
 const EventsPage = () => {
-  const [events, setEvents ] = useState<Event[]>([])
+  // Initialize events as empty array to prevent undefined errors
+  const [events, setEvents] = useState<Event[]>([]);
   const [activeTab, setActiveTab] = useState<'UPCOMING' | 'PAST'>('UPCOMING');
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredEvents, setFilteredEvents] = useState<Event[]>(events);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -92,336 +92,259 @@ const EventsPage = () => {
   const [showDatePopup, setShowDatePopup] = useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>('');
   const hasLoadedRef = useRef(false);
-  const [ fetching, setFetching ] = useState<boolean>(false)
+  const [fetching, setFetching] = useState<boolean>(false);
 
-  // Filter events based on status, type, and search
+  // Load events from HubSpot
   useEffect(() => {
-  let filtered = events;
-
-  // Filter by tab (status)
-  filtered = filtered.filter(event => event.status === activeTab);
-
-  // Filter by type
-  if (selectedFilter !== 'all') {
-    filtered = filtered.filter(event => event.type === selectedFilter);
-  }
-
-  // Filter by search term with null checks
-  if (searchTerm) {
-    filtered = filtered.filter(event => {
-      const title = event.title || ''; // Default to empty string if null/undefined
-      const description = event.description || ''; // Default to empty string if null/undefined
-      const tags = event.tags || []; // Default to empty array if null/undefined
-      
-      return (
-        title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tags.some(tag => (tag || '').toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    });
-  }
-
-  setFilteredEvents(filtered);
-}, [events, activeTab, selectedFilter, searchTerm]);
-
-  // Mock API call to fetch events from HubSpot
-  useEffect(() => {
-    const fetchEventsFromHubSpot = async () => {
-      setFetching(()=>true)
+    const loadEvents = async () => {
       if (hasLoadedRef.current) return;
       
       try {
-        await hubspotService.getAllEvents().then((res)=> {
-          setEvents(()=>res.response)
-          setFetching(()=>false)
-        })
-        // This would be your actual HubSpot API call
+        setFetching(true);
         hasLoadedRef.current = true;
+        
+        console.log('Loading events from HubSpot...');
+        const response = await hubspotService.getAllEvents();
+        
+        if (response && response.results) {
+          // Transform HubSpot events to our Event interface
+          const transformedEvents: Event[] = response.results.map((hubspotEvent: any) => ({
+            id: hubspotEvent.id || hubspotEvent.objectId || Math.random().toString(),
+            title: hubspotEvent.eventName || 'Unnamed Event',
+            description: hubspotEvent.eventDescription || 'No description available',
+            date: hubspotEvent.startDateTime ? hubspotEvent.startDateTime.split('T')[0] : new Date().toISOString().split('T')[0],
+            time: hubspotEvent.startDateTime ? new Date(hubspotEvent.startDateTime).toLocaleTimeString() : '12:00 PM',
+            location: hubspotEvent.eventUrl || 'Online',
+            type: determineEventType(hubspotEvent.eventType || 'webinar'),
+            status: determineEventStatus(hubspotEvent.startDateTime),
+            imageUrl: hubspotEvent.eventUrl || Backdrop,
+            videoUrl: hubspotEvent.eventUrl,
+            registrationUrl: hubspotEvent.eventUrl,
+            attendeeCount: hubspotEvent.registrants || 0,
+            maxAttendees: hubspotEvent.registrants || 100,
+            tags: hubspotEvent.customProperties ? Object.keys(hubspotEvent.customProperties) : ['webinar'],
+            speaker: {
+              name: hubspotEvent.eventOrganizer || 'Noyack Team',
+              title: 'Financial Advisor',
+              imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'
+            }
+          }));
+          
+          console.log('Transformed events:', transformedEvents);
+          setEvents(transformedEvents);
+        } else {
+          console.log('No events found, using empty array');
+          setEvents([]);
+        }
       } catch (error) {
-        console.error('Error fetching events from HubSpot:', error);
+        console.error('Error loading events:', error);
+        // Set empty array on error to prevent undefined issues
+        setEvents([]);
+      } finally {
+        setFetching(false);
       }
     };
 
-    fetchEventsFromHubSpot();
+    loadEvents();
   }, []);
 
-  const openEventModal = (event: Event) => {
-    setSelectedEvent(event);
-    setShowEventModal(true);
-  };
-
-  const closeEventModal = () => {
-    setShowEventModal(false);
-    setSelectedEvent(null);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const getEventTypeColor = (type: string) => {
-    const colors = {
-      webinar: 'bg-blue-100 text-blue-800',
-      workshop: 'bg-green-100 text-green-800',
-      masterclass: 'bg-purple-100 text-purple-800',
-      networking: 'bg-orange-100 text-orange-800',
-      conference: 'bg-red-100 text-red-800'
+  // Helper functions
+  const determineEventType = (hubspotType: string): Event['type'] => {
+    const typeMap: { [key: string]: Event['type'] } = {
+      'webinar': 'webinar',
+      'workshop': 'workshop',
+      'masterclass': 'masterclass',
+      'networking': 'networking',
+      'conference': 'conference'
     };
-    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return typeMap[hubspotType.toLowerCase()] || 'webinar';
   };
 
-  // Calendar functions
-  const getDaysInMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const determineEventStatus = (startDateTime: string): Event['status'] => {
+    if (!startDateTime) return 'UPCOMING';
+    const eventDate = new Date(startDateTime);
+    const now = new Date();
+    return eventDate < now ? 'PAST' : 'UPCOMING';
   };
 
-  const getFirstDayOfMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  };
-
-  const getEventsForDate = (dateStr: string) => {
-    return events.filter(event => event.date === dateStr);
-  };
-
-  const handleDateClick = (day: number) => {
-    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const eventsOnDate = getEventsForDate(dateStr);
-    
-    if (eventsOnDate.length > 0) {
-      setSelectedDateEvents(eventsOnDate);
-      setSelectedCalendarDate(dateStr);
-      setShowDatePopup(true);
-    }
-  };
-
-  const renderCalendar = () => {
-    const daysInMonth = getDaysInMonth(currentDate);
-    const firstDay = getFirstDayOfMonth(currentDate);
-    const days = [];
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-    // Add day names header
-    const dayHeaders = dayNames.map(day => (
-      <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
-        {day}
-      </div>
-    ));
-
-    // Add empty cells for days before the first day of the month
-    for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-8"></div>);
+  // Filter events based on status, type, and search
+  useEffect(() => {
+    // Always ensure events is an array before filtering
+    if (!Array.isArray(events)) {
+      console.warn('Events is not an array:', events);
+      setFilteredEvents([]);
+      return;
     }
 
-    // Add days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const eventsOnDate = getEventsForDate(dateStr);
-      const isToday = new Date().toDateString() === new Date(dateStr).toDateString();
+    let filtered = [...events]; // Create a copy to avoid mutations
 
-      days.push(
-        <div
-          key={day}
-          onClick={() => handleDateClick(day)}
-          className={`h-8 flex items-center justify-center text-sm relative cursor-pointer hover:bg-gray-100 rounded ${
-            isToday ? 'bg-green-100 text-green-800 font-bold' : 'text-gray-700'
-          } ${eventsOnDate.length > 0 ? 'font-medium' : ''}`}
-        >
-          {day}
-          {eventsOnDate.length > 0 && (
-            <div className="absolute bottom-0 right-1 flex gap-0.5">
-              {eventsOnDate.slice(0, 3).map((event, index) => (
-                <div
-                  key={index}
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    event.type === 'webinar' ? 'bg-blue-500' :
-                    event.type === 'workshop' ? 'bg-green-500' :
-                    event.type === 'masterclass' ? 'bg-purple-500' :
-                    event.type === 'networking' ? 'bg-orange-500' :
-                    'bg-red-500'
-                  }`}
-                />
-              ))}
-              {eventsOnDate.length > 3 && (
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-              )}
+    try {
+      // Filter by tab (status)
+      filtered = filtered.filter(event => {
+        if (!event || !event.status) return false;
+        return event.status === activeTab;
+      });
+
+      // Filter by type
+      if (selectedFilter !== 'all') {
+        filtered = filtered.filter(event => {
+          if (!event || !event.type) return false;
+          return event.type === selectedFilter;
+        });
+      }
+
+      // Filter by search term with null checks
+      if (searchTerm && searchTerm.trim() !== '') {
+        const searchLower = searchTerm.toLowerCase().trim();
+        filtered = filtered.filter(event => {
+          if (!event) return false;
+          
+          const title = (event.title || '').toLowerCase();
+          const description = (event.description || '').toLowerCase();
+          const tags = Array.isArray(event.tags) ? event.tags : [];
+          
+          return (
+            title.includes(searchLower) ||
+            description.includes(searchLower) ||
+            tags.some(tag => (tag || '').toLowerCase().includes(searchLower))
+          );
+        });
+      }
+
+      console.log('Filtered events:', filtered.length, 'from', events.length, 'total events');
+      setFilteredEvents(filtered);
+    } catch (error) {
+      console.error('Error filtering events:', error);
+      setFilteredEvents([]);
+    }
+  }, [events, activeTab, selectedFilter, searchTerm]);
+
+  // Rest of your component code (EventCard, Calendar, etc.)
+  const EventCard = ({ event }: { event: Event }) => {
+    const getEventTypeColor = (type: string) => {
+      const colors = {
+        webinar: 'bg-blue-100 text-blue-800',
+        workshop: 'bg-green-100 text-green-800',
+        masterclass: 'bg-purple-100 text-purple-800',
+        networking: 'bg-orange-100 text-orange-800',
+        conference: 'bg-red-100 text-red-800'
+      };
+      return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    };
+
+    const formatDate = (dateString: string) => {
+      try {
+        return new Date(dateString).toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        });
+      } catch {
+        return 'Invalid Date';
+      }
+    };
+
+    return (
+      <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+        <div className="relative">
+          <img 
+            src={event.imageUrl || Backdrop} 
+            alt={event.title}
+            className="w-full h-48 object-cover"
+            onError={(e) => {
+              e.currentTarget.src = Backdrop;
+            }}
+          />
+          <div className="absolute top-4 left-4">
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getEventTypeColor(event.type)}`}>
+              {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+            </span>
+          </div>
+          {event.status === 'live' && (
+            <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              LIVE
             </div>
           )}
         </div>
-      );
-    }
-
-    return (
-      <>
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {dayHeaders}
+        
+        <div className="p-6">
+          <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
+            <Calendar className="w-4 h-4" />
+            <span>{formatDate(event.date)}</span>
+            <Clock className="w-4 h-4 ml-2" />
+            <span>{event.time}</span>
+          </div>
+          
+          <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">
+            {event.title}
+          </h3>
+          
+          <p className="text-gray-600 mb-4 line-clamp-2">
+            {event.description}
+          </p>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <MapPin className="w-4 h-4" />
+              <span className="truncate">{event.location}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-600">
+                {event.attendeeCount || 0}
+                {event.maxAttendees && ` / ${event.maxAttendees}`}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 mt-4">
+            {event.status === 'UPCOMING' && event.registrationUrl && (
+              <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium">
+                Register
+              </button>
+            )}
+            
+            {event.status === 'PAST' && event.videoUrl && (
+              <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+                <Play className="w-4 h-4" />
+                Watch
+              </button>
+            )}
+            
+            <button 
+              onClick={() => {
+                setSelectedEvent(event);
+                setShowEventModal(true);
+              }}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            >
+              Details
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-7 gap-1">
-          {days}
-        </div>
-      </>
+      </div>
     );
   };
 
-  const EventCard = ({ event }: { event: Event }) => (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden">
-      <div className="relative">
-        <img 
-          src={Backdrop} 
-          alt={event.title}
-          className="w-full h-48 object-contain"
-        />
-        <div className="absolute top-4 left-4">
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getEventTypeColor(event.type)}`}>
-            {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-          </span>
-        </div>
-        {event.status === 'PAST' && event.videoUrl && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <button className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-4 transition-all duration-200">
-              <Play className="w-8 h-8 text-white" />
-            </button>
-          </div>
-        )}
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner />
       </div>
-      
-      <div className="p-6">
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-          <Calendar className="w-4 h-4" />
-          <span>{formatDate(event.date)}</span>
-          <Clock className="w-4 h-4 ml-2" />
-          <span>{event.time}</span>
-        </div>
-        
-        <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">
-          {event.title}
-        </h3>
-        
-        <p className="text-gray-600 mb-4 line-clamp-3">
-          {event.description}
-        </p>
-        
-        <div className="flex items-center gap-2 mb-4">
-          <MapPin className="w-4 h-4 text-gray-500" />
-          <span className="text-sm text-gray-600">{event.location}</span>
-        </div>
-        
-        {/* {event.speaker && (
-          <div className="flex items-center gap-3 mb-4">
-            <img 
-              src={event.speaker.imageUrl} 
-              alt={event.speaker.name}
-              className="w-8 h-8 rounded-full"
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900">{event.speaker.name}</p>
-              <p className="text-xs text-gray-600">{event.speaker.title}</p>
-            </div>
-          </div>
-        )} */}
-        
-        {/* <div className="flex flex-wrap gap-2 mb-4">
-          {event.tags.map((tag, index) => (
-            <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-              {tag}
-            </span>
-          ))}
-        </div> */}
-        
-        <div className="flex items-center justify-between">
-          {/* {event.status === 'upcoming' && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Users className="w-4 h-4" />
-              <span>{event.attendeeCount}/{event.maxAttendees} registered</span>
-            </div>
-          )} */}
-          
-          {event.status === 'PAST' && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Users className="w-4 h-4" />
-              <span>{event.attendeeCount} attended</span>
-            </div>
-          )}
-          
-          <button 
-            onClick={() => openEventModal(event)}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
-          >
-            {event.status === 'UPCOMING' ? 'Register' : 'View Details'}
-            <ExternalLink className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  }
 
-  const SocialFeed = () => (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-        <Share className="w-5 h-5" />
-        Social Media Buzz
-      </h3>
-      
-      <div className="space-y-4">
-        {mockSocialPosts.map((post) => (
-          <div key={post.id} className="border-b border-gray-200 pb-4 last:border-b-0">
-            <div className="flex items-start gap-3">
-              <img 
-                src={post.authorImage} 
-                alt={post.author}
-                className="w-10 h-10 rounded-full"
-              />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-medium text-gray-900">{post.author}</span>
-                  <span className="text-sm text-gray-500">•</span>
-                  <span className="text-sm text-gray-500">{post.date}</span>
-                  <div className={`w-4 h-4 rounded ${post.platform === 'linkedin' ? 'bg-blue-600' : 'bg-sky-500'}`}>
-                    {post.platform === 'linkedin' ? (
-                      <span className="text-white text-xs font-bold flex items-center justify-center h-full">in</span>
-                    ) : (
-                      <span className="text-white text-xs font-bold flex items-center justify-center h-full">X</span>
-                    )}
-                  </div>
-                </div>
-                
-                <p className="text-gray-800 mb-3">{post.content}</p>
-                
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                  <span className="flex items-center gap-1">
-                    <span>❤️</span>
-                    {post.likes}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span>🔄</span>
-                    {post.shares}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      <button className="w-full mt-4 text-green-600 hover:text-green-700 font-medium">
-        Load more posts
-      </button>
-    </div>
-  );
-
-  if(fetching)
-    return(<LoadingSpinner />)
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gray-50 p-6 space-y-8">
       {/* Header */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-gray-800">Events & Learning</h1>
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Noyack Events
+        </h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Join our expert-led events, workshops, and masterclasses to enhance your financial knowledge and connect with fellow investors.
+          Join our expert-led webinars, workshops, and networking events designed to enhance your financial knowledge and investment strategy.
         </p>
       </div>
 
@@ -461,8 +384,16 @@ const EventsPage = () => {
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8">
           {[
-            { id: 'UPCOMING', label: 'Upcoming Events', count: events.filter(e => e.status === 'UPCOMING').length },
-            { id: 'PAST', label: 'Past Events', count: events.filter(e => e.status === 'PAST').length }
+            { 
+              id: 'UPCOMING', 
+              label: 'Upcoming Events', 
+              count: Array.isArray(events) ? events.filter(e => e && e.status === 'UPCOMING').length : 0 
+            },
+            { 
+              id: 'PAST', 
+              label: 'Past Events', 
+              count: Array.isArray(events) ? events.filter(e => e && e.status === 'PAST').length : 0 
+            }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -485,128 +416,37 @@ const EventsPage = () => {
       {/* Content Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Main Content */}
-        <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 gap-6">
-            {filteredEvents.map((event,i) => (
-              <EventCard key={i} event={event} />
+        <div className="lg:col-span-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {Array.isArray(filteredEvents) && filteredEvents.map((event, i) => (
+              <EventCard key={event?.id || i} event={event} />
             ))}
             
-            {filteredEvents.length === 0 && (
-              <div className="text-center py-12">
+            {(!Array.isArray(filteredEvents) || filteredEvents.length === 0) && (
+              <div className="col-span-full text-center py-12">
                 <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No events found</h3>
-                <p className="text-gray-600">Try adjusting your search or filter criteria.</p>
+                <p className="text-gray-600">
+                  {!Array.isArray(events) || events.length === 0 
+                    ? 'No events are currently available.' 
+                    : 'Try adjusting your search or filter criteria.'
+                  }
+                </p>
               </div>
             )}
           </div>
         </div>
-        
-        {/* Right Sidebar */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Calendar */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">
-                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </h3>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
-                  className="p-2 hover:bg-gray-100 rounded"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button 
-                  onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
-                  className="p-2 hover:bg-gray-100 rounded"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            
-            {renderCalendar()}
-            
-            <div className="mt-4 flex flex-wrap gap-2 text-xs">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span>Webinar</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span>Workshop</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                <span>Masterclass</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Social Feed */}
-          <SocialFeed />
-        </div>
       </div>
 
-      {/* Date Events Popup */}
-      {showDatePopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Events on {formatDate(selectedCalendarDate)}
-                </h3>
-                <button 
-                  onClick={() => setShowDatePopup(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                {selectedDateEvents.map((event) => (
-                  <div key={event.id} className="border border-gray-200 rounded-lg p-4 hover:border-green-300 cursor-pointer"
-                       onClick={() => {
-                         setShowDatePopup(false);
-                         openEventModal(event);
-                       }}>
-                    <div className="flex items-start gap-3">
-                      <img 
-                        src={event.imageUrl} 
-                        alt={event.title}
-                        className="w-12 h-12 rounded object-cover"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-1">{event.title}</h4>
-                        <p className="text-sm text-gray-600 mb-2">{event.time} • {event.location}</p>
-                        <span className={`px-2 py-1 rounded text-xs ${getEventTypeColor(event.type)}`}>
-                          {event.type}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Event Modal */}
+      {/* Event Details Modal */}
       {showEventModal && selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="relative">
-              <img 
-                src={selectedEvent.imageUrl} 
-                alt={selectedEvent.title}
-                className="w-full h-64 object-cover"
-              />
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-90vh overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Event Details</h3>
               <button 
-                onClick={closeEventModal}
-                className="absolute top-4 right-4 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-2"
+                onClick={() => setShowEventModal(false)}
+                className="text-gray-500 hover:text-gray-700"
               >
                 ✕
               </button>
@@ -614,11 +454,11 @@ const EventsPage = () => {
             
             <div className="p-6">
               <div className="flex items-center gap-2 mb-4">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getEventTypeColor(selectedEvent.type)}`}>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800`}>
                   {selectedEvent.type.charAt(0).toUpperCase() + selectedEvent.type.slice(1)}
                 </span>
                 <span className="text-sm text-gray-600">
-                  {formatDate(selectedEvent.date)} • {selectedEvent.time}
+                  {selectedEvent.date} • {selectedEvent.time}
                 </span>
               </div>
               
@@ -657,13 +497,15 @@ const EventsPage = () => {
                 </div>
               </div>
               
-              <div className="flex flex-wrap gap-2 mb-6">
-                {selectedEvent.tags.map((tag, index) => (
-                  <span key={index} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              {Array.isArray(selectedEvent.tags) && selectedEvent.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {selectedEvent.tags.map((tag, index) => (
+                    <span key={index} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
               
               <div className="flex gap-3">
                 {selectedEvent.status === 'UPCOMING' && selectedEvent.registrationUrl && (
