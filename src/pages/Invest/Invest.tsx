@@ -195,7 +195,7 @@ const Invest: React.FC = () => {
   // Handle next button click
   const handleNext = async () => {
     // Trigger validation for current step
-    // const errors = await formik.validateForm();
+    const errors = await formik.validateForm();
     
     // Get current step fields
     let currentStepFields: string[] = [];
@@ -211,9 +211,9 @@ const Invest: React.FC = () => {
     }
     
     // Check if current step has errors
-    // const currentStepHasErrors = currentStepFields.some(field => errors[field as keyof InvestmentFormData]);
+    const currentStepHasErrors = currentStepFields.some(field => errors[field as keyof InvestmentFormData]);
     
-    // if (currentStepHasErrors) {
+    if (currentStepHasErrors) {
       // Mark fields as touched to show errors
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const touchedFields: any = {};
@@ -222,7 +222,7 @@ const Invest: React.FC = () => {
       });
       formik.setTouched({ ...formik.touched, ...touchedFields });
       return;
-    // }
+    }
     
     // If no errors, proceed to next step
     if (activeStep < 3) {
