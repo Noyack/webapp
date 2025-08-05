@@ -1,7 +1,7 @@
 import { Box, Tab, Tabs } from "@mui/material";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import FinancialGlossary from "./FinancialGlossary";
-import Ebook from "./Ebook";
+import Ebook from "./Ebooks/Ebook";
 
 interface TabPanelProps {
   children?: ReactNode;
