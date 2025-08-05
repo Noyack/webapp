@@ -64,9 +64,9 @@ export class EbooksService {
   /**
    * Get all ebooks from the "ALL FINAL EBOOKS" folder
    */
-  async getAllEbooks(): Promise<any> {
+  async getAllEbooks(): Promise<Ebook[]> {
     try {
-      const response = await apiClient.get<EbooksResponse>('/hubspot/ebooks');
+      const response = await apiClient.get<any>('/hubspot/ebooks');
       
       if (response.success) {
         return response.data;
@@ -136,17 +136,17 @@ export class EbooksService {
   /**
    * Get a specific page of an ebook
    */
-  async getEbookPage(fileId: string, pageNumber: number, format: string = 'image'): Promise<PageData> {
+  async getEbookPage(fileId: string, pageNumber: number, format: string = 'image'): Promise<any> {
     try {
       const response = await apiClient.get<PageDataResponse>(
         `/hubspot/ebooks/${fileId}/stream?page=${pageNumber}&format=${format}`
       );
       
-      if (response.data.success) {
-        return response.data.data;
+      if (response.success) {
+        return response.data;
       }
       
-      throw new Error(response.data.message || 'Failed to get ebook page');
+      throw new Error(response.message || 'Failed to get ebook page');
     } catch (error) {
       console.error('Error getting ebook page:', error);
       throw error;
