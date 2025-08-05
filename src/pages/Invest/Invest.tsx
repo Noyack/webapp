@@ -83,9 +83,6 @@ const step1Schema = Yup.object({
     .min(1, 'Last name is required')
     .max(50, 'Last name must be less than 50 characters')
     .required('Last name is required'),
-  email: Yup.string()
-    .email('Invalid email format')
-    .required('Email is required'),
   isAccreditedInvestor: Yup.string()
     .required('Please specify if you are an accredited investor'),
   investmentAccount: Yup.string()
@@ -200,7 +197,7 @@ const Invest: React.FC = () => {
     // Get current step fields
     let currentStepFields: string[] = [];
     if (activeStep === 0) {
-      currentStepFields = ['firstName', 'lastName', 'email', 'isAccreditedInvestor', 'investmentAccount', 'investmentAmount'];
+      currentStepFields = ['firstName', 'lastName', 'isAccreditedInvestor', 'investmentAccount', 'investmentAmount'];
       if (formik.values.investmentAccount === 'equity_trust_ira') {
         currentStepFields.push('iraAccountNumber');
       }

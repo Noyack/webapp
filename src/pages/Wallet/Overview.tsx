@@ -8,14 +8,18 @@ import {
   AccountBalance,
   // ReferralInfo,
   InvestmentTransaction,
+  EquityAccounts,
+  EquityActivities,
   // RecurringInvestment
 } from '../../types'
 import { investmentService } from '../../services'
 import { Link } from 'react-router-dom'
 import equityTrustService from '../../services/equityTrust.service'
+import LoadingSpinner from '../../components/UI/Loader'
 
 function Overview() {
     const { user } = useUser();
+    const [fecthing, setFetching] = useState<boolean>(false)
     
     // Initialize state with proper typing
     const [state, setState] = useState<OverviewState>({
@@ -38,92 +42,28 @@ function Overview() {
       totalEarnings: 0,
       availableToWithdraw: 0
     });
+    
+    const [ equityAccount, setEquityAccount] = useState<EquityAccounts[]>([])
+    const [ equityActivities, setEquityActivities] = useState<EquityActivities[]>([])
 
     useEffect(()=>{
-      const test =async()=> {
-        return await equityTrustService.getAccounts("205377261")
+      const fetch = async()=> {
+        setFetching(true)
+        // await equityTrustService.getAccounts("205377260").then(res=>{
+        //   setEquityAccount(res)
+        // })
+        // await equityTrustService.getActivities({accountNumber:"205377260"}).then(res=>{
+        //   setEquityActivities(res)
+        // })
       }
 
-      console.log(test())
+      fetch().then(()=>setFetching(false))
     },[])
     
-    // Using correct type for referralInfo state
-    // const [referralInfo, setReferralInfo] = useState<ReferralInfo>({
-    //   code: "https://exemple.com/fenwif23e1edw",
-    //   url: "https://exemple.com/fenwif23e1edw",
-    //   referralCount: 0,
-    //   rewardsEarned: 0,
-    //   pendingRewards: 0
-    // });
     
     const [transactions] = useState<InvestmentTransaction[]>([]);
-    
-    // Fix the type error by explicitly defining the type
-    // const [recurringInvestments] = useState<RecurringInvestment[]>([]);
-    
-    // Fetch data on component mount
-    useEffect(() => {
-      // const fetchData = async () => {
-      //   try {
-      //     // Fetch account balance
-      //     setState(prev => ({
-      //       ...prev, 
-      //       isLoading: {...prev.isLoading, balance: true}
-      //     }));
-          
-      //     const balance = await investmentService.getAccountBalance();
-      //     setAccountBalance(balance);
-          
-      //     setState(prev => ({
-      //       ...prev, 
-      //       isLoading: {...prev.isLoading, balance: false}
-      //     }));
-          
-      //     // Fetch referral info
-      //     setState(prev => ({
-      //       ...prev, 
-      //       isLoading: {...prev.isLoading, referral: true}
-      //     }));
-          
-      //     const referralData = await investmentService.getReferralInfo();
-      //     setReferralInfo(referralData);
-      //     setState(prev => ({
-      //       ...prev, 
-      //       referralCode: referralData.url,
-      //       isLoading: {...prev.isLoading, referral: false}
-      //     }));
-          
-      //     // Fetch transaction history
-      //     setState(prev => ({
-      //       ...prev, 
-      //       isLoading: {...prev.isLoading, transactions: true}
-      //     }));
-          
-      //     const txns = await investmentService.getTransactionHistory({
-      //       limit: 5 // Just get the most recent 5
-      //     });
-      //     setTransactions(txns);
-          
-      //     // Fetch recurring investments
-      //     const recurrings = await investmentService.getRecurringInvestments();
-      //     setRecurringInvestments(recurrings);
-          
-      //     setState(prev => ({
-      //       ...prev, 
-      //       isLoading: {...prev.isLoading, transactions: false}
-      //     }));
-      //   } catch (error) {
-      //     console.error('Error fetching user data:', error);
-      //     setState(prev => ({
-      //       ...prev,
-      //       error: error instanceof Error ? error.message : 'An unknown error occurred',
-      //       isLoading: {balance: false, referral: false, transactions: false}
-      //     }));
-      //   }
-      // };
-      
-      // fetchData();
-    }, []);
+
+
     
     const tooltipText = `The Fund has adopted an "opt out"
     distribution reinvestment plan (DRIP), 
@@ -244,34 +184,6 @@ function Overview() {
               </Typography>
               <Typography className='text-gray-500' fontSize={"15px"}>Account Holder</Typography>
             </div>
-            <div className='text-gray-500'>
-              <Typography fontWeight={'bold'}>Referral Code</Typography>
-              <div className="flex border-1 rounded-md">
-                <input 
-                  value={state.referralCode} 
-                  disabled 
-                  className='rounded-l-md w-60 px-1'
-                  aria-label="Referral code"
-                />
-                {state.referralCopied ? (
-                  <Button 
-                    sx={{ background:"#999", color:"#000"}} 
-                    className='rounded-md'
-                    disabled
-                  >
-                    Copied
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={copyToClipboard} 
-                    sx={{ background:"#2e7d32", color:"#fff"}} 
-                    className='rounded-r-md'
-                  >
-                    Copy
-                  </Button>
-                )}
-              </div>
-            </div>
           </div>
         </div>
         
@@ -302,8 +214,9 @@ function Overview() {
                 You have no recurring investments.
               </Typography>
             )} */}
-            <div className='flex justify-around'>
-              <Link to={""} className='text-[#2E7D32] font-bold underline'>Invest in Alternative Investments</Link>
+            <div className='flex justify-evenly'>
+              <Link to={"/account"} className='text-[#2E7D32] font-bold underline'>Open a self-directed IRA</Link>
+              {equityAccount.length? <Link to={"/account"} className='text-[#2E7D32] font-bold underline'>Invest now</Link>:null}
             </div>
           </div>
         </div>
@@ -311,87 +224,87 @@ function Overview() {
         <div className='flex flex-col gap-2'>
           <Typography fontSize={"22px"} fontWeight={"bold"}>My Wallet</Typography>
           <div className='flex flex-col shadow-xl w-full min-h-20 bg-white rounded-4xl gap-8 p-8'>
-            <div className='flex justify-between'>
+          { !fecthing?(equityAccount.length
+            ?
+            equityAccount.map((x,i)=>(
+            <div key={i}>
+            <Typography textAlign={"center"} fontWeight={"bolder"} fontSize={"20px"}>{x.accountType}</Typography>
+            <div className='flex flex-col justify-between'>
+              <div>
+                <Typography fontWeight={"bold"}>Account Owner {x.ownerContactName}</Typography>
+              </div>
               <div>
                 <Typography fontSize={"28px"} sx={{color:"#2e7d32"}} fontWeight={"bold"}>
-                  ${state.balanceType === 'wallet' 
-                    ? accountBalance.walletBalance.toFixed(2) 
-                    : accountBalance.totalInvestments.toFixed(2)}
+                   {x.availableCash.toFixed(2) }
                 </Typography>
-                {state.balanceType === "wallet" && (
                   <Typography>
-                    Wallet Balance
+                    Available Cash
                   </Typography>
-                )}
-                {state.balanceType === "balance" && (
-                  <Typography>
-                    Account Balance
-                  </Typography>
-                )}
               </div>
-              <ToggleButtonGroup
-                color='success'
-                value={state.balanceType}
-                exclusive
-                onChange={handleChangeType}
-                aria-label='Account balance type switch'
-              >
-                <ToggleButton value={"wallet"}>Wallet</ToggleButton>
-                <ToggleButton value={"balance"}>Balance</ToggleButton>
-              </ToggleButtonGroup>
             </div>
             
             <div className='flex justify-between'>
-              <div>
-                <div className='flex gap-1'>
+                <div className='flex flex-col gap-1'>
                   <Typography fontWeight={"bold"} className='text-gray-500'>
-                    Re-Invest Distributions
+                    Opened Date
                   </Typography>
-                  <Tooltip title={tooltipText} placement="top-start">
-                    <InfoOutlined />
-                  </Tooltip>
+                  <Typography fontWeight={"bold"} className='text-black'>
+                    {x.accountOpenDate}
+                  </Typography>
                 </div>
-                {state.reinvestEnabled ? (
-                  <Typography>
-                    Enabled
+                <div className='flex flex-col gap-1'>
+                  <Typography fontWeight={"bold"} className='text-gray-500'>
+                    Status
                   </Typography>
-                ) : (
-                  <Typography>
-                    Disabled
+                  <Typography fontWeight={"bold"} className='text-green-700'>
+                    {x.accountStatus}
                   </Typography>
-                )}
-              </div>
-              <Switch 
-                color='success' 
-                checked={state.reinvestEnabled} 
-                onChange={handleChangeDistribution} 
-                inputProps={{ 'aria-label': 'Re-Invest Distributions toggle' }}
-              />
+                </div>
             </div>
-            
-            <div>
-              <Button 
-                startIcon={<Add />} 
-                onClick={handleAddPaymentMethod}
-                aria-label="Add payment method"
-              >
-                Add payment method
-              </Button>
+            </div>))
+            :
+            <Typography textAlign={'center'}>No accounts available</Typography>
+            )
+            :
+            <div className="flex items-center justify-center ">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
             </div>
-            
-            <Button 
-              className='w-60 self-end' 
-              color='success' 
-              sx={{background:"#2e7d32", color:"#fff", p:"10px"}}
-              onClick={handleCashOut}
-            >
-              Cash Out
-            </Button>
+          }
           </div>
         </div>
         
         <div className='flex flex-col gap-2'>
-          <Typography fontSize={"22px"} fontWeight={"bold"}>Investment History</Typography>
+          <Typography fontSize={"22px"} fontWeight={"bold"}>Accounts History</Typography>
+          <div className='flex flex-col shadow-xl w-full min-h-20 bg-white rounded-4xl gap-8 p-8'>
+            {!fecthing ? equityActivities.length > 0 ? (
+              <div className="w-full">
+                <div className="flex font-bold border-b pb-2 mb-4">
+                  <div className="w-1/4">Date</div>
+                  <div className="w-1/4">Type</div>
+                  <div className="w-1/4">Account</div>
+                  <div className="w-1/4">Status</div>
+                </div>
+                {equityActivities.map((x,i) => (
+                  <div key={i} className="flex border-b py-2">
+                    <div className="w-1/4">{new Date(x.dateReceived).toLocaleDateString()}</div>
+                    <div className="w-1/4 capitalize">{x.processType}</div>
+                    <div className="w-1/4">{x.accountNumber}</div>
+                    <div className="w-1/4 capitalize">{x.status}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Typography textAlign={"center"}>No activies available.</Typography>
+            ):
+            <div className="flex items-center justify-center ">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
+            </div>
+                    }
+
+          </div>
+        </div>
+        {/* <div className='flex flex-col gap-2'>
+          <Typography fontSize={"22px"} fontWeight={"bold"}>Accounts History</Typography>
           <div className='flex flex-col shadow-xl w-full min-h-20 bg-white rounded-4xl gap-8 p-8'>
             {transactions.length > 0 ? (
               <div className="w-full">
@@ -422,7 +335,7 @@ function Overview() {
               Account Statement
             </Button>
           </div>
-        </div>
+        </div> */}
       </div>
     );
 }

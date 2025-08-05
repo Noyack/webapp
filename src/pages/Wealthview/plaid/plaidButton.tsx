@@ -17,6 +17,7 @@ const PlaidLogo = () =>{
 const PlaidLinkButton = () => {
   const { hasPermission, getUpgradeInfo } = usePermissions();
   const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [list, setList] = useState<string[]>(['auth', 'transactions', 'identity', 'investments'])
   const [userToken, setUserToken] = useState<string|null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +56,7 @@ const PlaidLinkButton = () => {
       if(userInfo?.id && userToken)
       try {
         setIsLoading(true);
-        const response = await wealthViewService.FetchPlaidLink(userInfo?.id, userToken);
+        const response = await wealthViewService.FetchPlaidLink(userInfo?.id, userToken, list);
         setLinkToken(response?.link_token);
       } catch (err) {
         console.error('Error fetching link token:', err);

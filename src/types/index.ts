@@ -626,6 +626,28 @@ export interface AccountBalance {
   totalEarnings: number;
   availableToWithdraw: number;
 }
+export interface EquityAccounts {
+  managerCode?: string;
+  ownerContactName?: string;
+  availableCash?: number;
+  accountOpenDate?:string;
+  accountType?: string
+  accountNumber?:string
+  ownerContactId?:string
+  accountStatus?:string
+}
+export interface EquityActivities {
+  acats?: boolean;
+  accountNumber?: string;
+  activityId?: string;
+  amount?: number;
+  contactName?: string;
+  dateReceived?: string;
+  deficiencies?: boolean;
+  processSubType?: string;
+  processType?: string;
+  status?: string;
+}
 
 export interface ReferralInfo {
   code: string;
@@ -1367,6 +1389,8 @@ export type PlaidAccountsData = {
   item: {
     institution_id: string;
     name?: string;
+    item_id?: string;
+    institution_name?:string;
   };
 }
 

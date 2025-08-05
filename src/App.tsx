@@ -102,23 +102,23 @@ const App: FC = () => {
           <AuthPage isMobile={isMobile} />
         </SignedOut>
         
-	 <SignedIn>
-	{((userInfo && isNew) || (isAuthenticated && !userInfo && !isLoading)) && (
-            <Suspense fallback={<LoadingSpinner />}>
-              <Creation isMobile={Boolean(isMobile)} />
-            </Suspense>
-          )}
-          
-          {(userInfo && isNew === false) && (
-            <ViewProvider>
-              <ResponsiveLayout isMobile={isMobile}>
-                <Suspense fallback={<LoadingSpinner />}>
-                <ScrollToTop />
-                  <AppRoutes />
-                </Suspense>
-              </ResponsiveLayout>
-            </ViewProvider>
-	    )}
+        <SignedIn>
+          {((userInfo && isNew) || (isAuthenticated && !userInfo && !isLoading)) && (
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <Creation isMobile={Boolean(isMobile)} />
+                    </Suspense>
+                  )}
+                  
+                  {(userInfo && isNew === false) && (
+                    <ViewProvider>
+                      <ResponsiveLayout isMobile={isMobile}>
+                        <Suspense fallback={<LoadingSpinner />}>
+                        <ScrollToTop />
+                          <AppRoutes />
+                        </Suspense>
+                      </ResponsiveLayout>
+                    </ViewProvider>
+              )}
 	     </SignedIn>
       </>
       </Suspense>

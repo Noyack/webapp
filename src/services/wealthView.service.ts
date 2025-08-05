@@ -62,10 +62,11 @@ export class WealthViewService {
     return response.data
   }
   
-  async FetchPlaidLink(userId:string, userToken:string): Promise<p_u_link>{
+  async FetchPlaidLink(userId:string, userToken:string, list:string[]): Promise<p_u_link>{
     const response = await apiClient.post<p_u_link>(`plaid/create_link_token`, {
       userId: userId,
-      userToken: userToken
+      userToken: userToken,
+      list: list
     })
     return response.data
   }

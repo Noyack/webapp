@@ -38,7 +38,7 @@ const PlaidDashboard = () => {
     { label: "Recent Transactions", value: "transactions" },
     { label: "Identity", value: "identity" },
     { label: "Investment", value: "investment" },
-    { label: "Liability", value: "liability" }
+    // { label: "Liability", value: "liability" }
   ];
 
   // Component map for rendering based on activeTab
