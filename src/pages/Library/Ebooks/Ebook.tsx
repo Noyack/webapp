@@ -1,13 +1,16 @@
+// src/pages/Library/Ebooks/Ebook.tsx
 import React, { useState, useEffect } from 'react';
-import { Download, Mail, ArrowRight, Loader } from 'lucide-react';
+import { Book, ArrowRight, Loader, Search, BookOpen } from 'lucide-react';
 import ebooksService, { Ebook as EbookType } from '../../../services/ebooks.service';
+import EbookReader from '../../../components/EbookReader/EbookReader';
 
 const Ebook = () => {
-  const [email, setEmail] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [ebooks, setEbooks] = useState<EbookType[]>([]);
+  const [filteredEbooks, setFilteredEbooks] = useState<EbookType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState<string | null>(null);
+  const [selectedEbookId, setSelectedEbookId] = useState<string | null>(null);
 
   // Color options for ebook covers
   const colorOptions = [
@@ -23,6 +26,10 @@ const Ebook = () => {
     fetchEbooks();
   }, []);
 
+  useEffect(() => {
+    filterEbooks();
+  }, [searchTerm, ebooks]);
+
   const fetchEbooks = async () => {
     try {
       setLoading(true);
@@ -37,31 +44,23 @@ const Ebook = () => {
     }
   };
 
-  const handleEmailSubmit = () => {
-    if (!email || !email.includes('@')) {
-      alert('Please enter a valid email address');
-      return;
+  const filterEbooks = () => {
+    if (!searchTerm.trim()) {
+      setFilteredEbooks(ebooks);
+    } else {
+      const filtered = ebooks.filter(ebook =>
+        ebook.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredEbooks(filtered);
     }
-    console.log('Email submitted:', email);
-    // Handle email submission logic here
-    setEmail('');
-    alert('Thank you! Check your email for the download link.');
   };
 
-  const handleDownload = async (ebook: EbookType, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    
-    setDownloading(ebook.id);
-    
-    try {
-      await ebooksService.downloadEbook(ebook.id, ebook.name);
-    } catch (err) {
-      alert(`Failed to download ${ebook.name}`);
-      console.error('Download error:', err);
-    } finally {
-      setDownloading(null);
-    }
+  const handleReadEbook = (ebookId: string) => {
+    setSelectedEbookId(ebookId);
+  };
+
+  const handleCloseReader = () => {
+    setSelectedEbookId(null);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -69,171 +68,208 @@ const Ebook = () => {
   };
 
   const getFileIcon = (extension: string) => {
-    switch (extension.toLowerCase()) {
-      case 'pdf':
-        return '📄';
-      case 'epub':
-        return '📖';
-      case 'mobi':
-      case 'azw':
-      case 'azw3':
-        return '📚';
-      default:
-        return '📄';
-    }
+    return ebooksService.getFileIcon(extension);
   };
 
   // Generate a clean title and description from the ebook name
   const generateEbookDetails = (name: string) => {
-    // Remove file extension and clean up the name
-    const cleanName = name.replace(/\.(pdf|epub|mobi|azw3?|doc|docx)$/i, '');
-    
-    // Split by common separators and take the first part as title
-    const parts = cleanName.split(/[-_\s]+/);
-    const title = parts.slice(0, 3).join(' ');
-    
-    return {
-      title: cleanName,
-      description: `Comprehensive guide and insights on ${title.toLowerCase()}`,
-      subtitle: "Expert knowledge and strategies to enhance your understanding."
-    };
+    return ebooksService.generateEbookDetails(name);
   };
 
-  if (loading) {
+  // If reader is open, show only the reader
+  if (selectedEbookId) {
     return (
-      <div className="min-h-screen py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-3xl font-bold text-blue-600 mb-4">EBOOKS & GUIDES</h1>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-              Downloadable, straightforward wealth guides from finance pros.
-            </h2>
-          </div>
-          <div className="flex justify-center items-center py-20">
-            <div className="text-center">
-              <Loader className="animate-spin mx-auto mb-4 text-blue-600" size={48} />
-              <p className="text-gray-600">Loading ebooks...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-3xl font-bold text-blue-600 mb-4">EBOOKS & GUIDES</h1>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-              Downloadable, straightforward wealth guides from finance pros.
-            </h2>
-          </div>
-          <div className="text-center py-20">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-              <p className="text-red-600 mb-4">{error}</p>
-              <button 
-                onClick={fetchEbooks}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <EbookReader 
+        ebookId={selectedEbookId} 
+        onClose={handleCloseReader}
+      />
     );
   }
 
   return (
-    <div className="min-h-screen py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-blue-600 mb-4">EBOOKS & GUIDES</h1>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-            Downloadable, straightforward wealth guides from finance pros.
-          </h2>
-          <p className="text-gray-600 mt-2">
-            {ebooks.length} ebook{ebooks.length !== 1 ? 's' : ''} available for download
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            📚 Digital Library
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Explore our collection of ebooks and resources. Read directly in your browser with our interactive reader.
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Ebooks Grid */}
-          <div className="flex-1">
-            {ebooks.length === 0 ? (
-              <div className="text-center py-20">
-                <p className="text-gray-600 text-lg mb-4">No ebooks available at the moment.</p>
+        {/* Search Bar */}
+        <div className="mb-8 max-w-md mx-auto">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search ebooks..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex justify-center items-center py-12">
+            <Loader className="animate-spin w-8 h-8 text-blue-600 mr-3" />
+            <span className="text-gray-600">Loading ebooks...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+            <div className="flex items-center">
+              <div className="text-red-500 text-xl mr-3">⚠️</div>
+              <div>
+                <h3 className="font-semibold text-red-800">Error loading ebooks</h3>
+                <p className="text-red-600 mt-1">{error}</p>
                 <button 
                   onClick={fetchEbooks}
-                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+                  className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                 >
-                  Refresh
+                  Try Again
                 </button>
               </div>
-            ) : (
-              <div className="flex flex-wrap gap-6">
-                {ebooks.map((ebook, index) => {
-                  const details = generateEbookDetails(ebook.name);
-                  const bgColor = colorOptions[index % colorOptions.length];
-                  
-                  return (
-                    <div key={ebook.id} className="max-w-[290px] rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
-                      {/* Ebook Cover */}
-                      <div className={`${bgColor} p-6 relative h-80 flex items-center justify-center`}>
-                        <div className="text-center">
-                          <h3 className="text-white text-lg font-bold mb-2 line-clamp-3">
-                            {details.title}
-                          </h3>
-                          <div className="bg-white/20 rounded px-3 py-1 text-white text-sm mb-2">
-                            NOYACK
-                          </div>
-                          <div className="text-white/80 text-xs">
-                            {getFileIcon(ebook.extension)} {ebook.extension.toUpperCase()} • {formatFileSize(ebook.size)}
-                          </div>
-                        </div>
-                        {/* File type indicator */}
-                        <div className="absolute top-4 right-4 w-16 h-20 bg-white/10 rounded border border-white/20 flex items-center justify-center text-white text-2xl">
-                          {getFileIcon(ebook.extension)}
-                        </div>
-                      </div>
+            </div>
+          </div>
+        )}
 
-                      {/* Ebook Details */}
-                      <div className="p-6">
-                        <h4 className="font-semibold text-gray-800 mb-2">{details.description}</h4>
-                        <p className="text-gray-600 text-sm mb-4">{details.subtitle}</p>
-                        
-                        <div className="flex items-center justify-between">
-                          <button 
-                            className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            onClick={(e) => handleDownload(ebook, e)}
-                            disabled={downloading === ebook.id}
-                          >
-                            {downloading === ebook.id ? (
-                              <>
-                                <Loader className="animate-spin" size={16} />
-                                Downloading...
-                              </>
-                            ) : (
-                              <>
-                                <Download size={16} />
-                                Download
-                              </>
-                            )}
-                          </button>
-                          
-                          <div className="text-xs text-gray-500">
-                            Added: {new Date(ebook.createdAt).toLocaleDateString()}
+        {/* Ebooks Grid */}
+        {!loading && !error && (
+          <>
+            {filteredEbooks.length === 0 ? (
+              <div className="text-center py-12">
+                <Book className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  {searchTerm ? 'No ebooks found' : 'No ebooks available'}
+                </h3>
+                <p className="text-gray-500">
+                  {searchTerm ? 'Try adjusting your search terms.' : 'Check back later for new additions.'}
+                </p>
+                {searchTerm && (
+                  <button 
+                    onClick={() => setSearchTerm('')}
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Clear Search
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="mb-6 text-center">
+                  <p className="text-gray-600">
+                    {searchTerm ? `Found ${filteredEbooks.length} ebook(s) for "${searchTerm}"` : `${filteredEbooks.length} ebooks available`}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                  {filteredEbooks.map((ebook, index) => {
+                    const details = generateEbookDetails(ebook.name);
+                    const colorClass = colorOptions[index % colorOptions.length];
+                    
+                    return (
+                      <div key={ebook.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                        {/* Ebook Cover */}
+                        <div className={`${colorClass} h-48 flex flex-col justify-between p-6 text-white relative overflow-hidden`}>
+                          <div className="absolute inset-0 bg-gradient-to-br from-black/20 to-black/40" />
+                          <div className="relative z-10">
+                            <div className="text-3xl mb-2">{getFileIcon(ebook.extension)}</div>
+                            <h3 className="font-bold text-lg leading-tight line-clamp-2">
+                              {details.title}
+                            </h3>
+                          </div>
+                          <div className="relative z-10">
+                            <span className="inline-block bg-white/20 px-2 py-1 rounded text-xs font-medium uppercase">
+                              {ebook.extension?.toUpperCase()}
+                            </span>
                           </div>
                         </div>
+                        
+                        {/* Ebook Details */}
+                        <div className="p-6">
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                            {details.description}
+                          </p>
+                          
+                          <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>Size: {formatFileSize(ebook.size)}</span>
+                            <span className={`px-2 py-1 rounded-full ${ebook.isReadable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                              {ebook.isReadable ? 'Readable' : 'View Only'}
+                            </span>
+                          </div>
+                          
+                          {/* Read Button */}
+                          {ebook.isReadable ? (
+                            <button
+                              onClick={() => handleReadEbook(ebook.id)}
+                              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center group-hover:scale-105"
+                            >
+                              <BookOpen className="w-4 h-4 mr-2" />
+                              Read Now
+                              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              className="w-full bg-gray-300 text-gray-500 font-semibold py-3 px-4 rounded-lg cursor-not-allowed"
+                            >
+                              Format Not Supported
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
+          </>
+        )}
+
+        {/* Info Section */}
+        <div className="mt-16 bg-white rounded-xl shadow-lg p-8">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              🔒 Secure Reading Experience
+            </h2>
+            <p className="text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Our ebooks are protected and can only be read within our secure reader. 
+              This ensures content security while providing you with a great reading experience 
+              featuring page navigation, zoom controls, dark mode, and more.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <BookOpen className="w-6 h-6 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Interactive Reader</h3>
+              <p className="text-gray-600 text-sm">Full-featured reading experience with zoom, navigation, and bookmarks</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <div className="text-green-600 font-bold">🔒</div>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Secure Access</h3>
+              <p className="text-gray-600 text-sm">Content is streamed securely and cannot be downloaded or copied</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <div className="text-purple-600 font-bold">📱</div>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Multi-Device</h3>
+              <p className="text-gray-600 text-sm">Read on any device with responsive design and touch support</p>
+            </div>
           </div>
         </div>
       </div>

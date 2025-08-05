@@ -7,11 +7,11 @@ export interface Ebook {
   extension: string;
   type: string;
   size: number;
-  url: string;
   createdAt: string;
   updatedAt: string;
   path?: string;
   folder?: string;
+  isReadable: boolean; // NEW: indicates if ebook can be read in-app
 }
 
 export interface EbooksResponse {
@@ -23,12 +23,35 @@ export interface EbooksResponse {
   error?: string;
 }
 
-export interface EbookDownloadResponse {
+export interface EbookMetadata {
+  id: string;
+  name: string;
+  extension: string;
+  totalPages: number;
+  format: 'pdf' | 'epub' | 'other';
+  size: number;
+  estimatedReadingTime?: number; // in minutes
+}
+
+export interface EbookMetadataResponse {
   success: boolean;
-  data: {
-    fileId: string;
-    downloadUrl: string;
-  };
+  data: EbookMetadata;
+  message?: string;
+  error?: string;
+}
+
+export interface PageData {
+  pageNumber: number;
+  totalPages: number;
+  content: string; // base64 image or HTML content
+  contentType: 'image' | 'html';
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface PageDataResponse {
+  success: boolean;
+  data: PageData;
   message?: string;
   error?: string;
 }
@@ -41,7 +64,7 @@ export class EbooksService {
   /**
    * Get all ebooks from the "ALL FINAL EBOOKS" folder
    */
-  async getAllEbooks(): Promise<Ebook[]> {
+  async getAllEbooks(): Promise<any> {
     try {
       const response = await apiClient.get<EbooksResponse>('/hubspot/ebooks');
       
@@ -77,7 +100,7 @@ export class EbooksService {
   /**
    * Get ebooks from a specific folder
    */
-  async getEbooksByFolder(folderName: string): Promise<Ebook[]> {
+  async getEbooksByFolder(folderName: string): Promise<any> {
     try {
       const response = await apiClient.get<EbooksResponse>(`/hubspot/ebooks/folder/${encodeURIComponent(folderName)}`);
       
@@ -93,46 +116,45 @@ export class EbooksService {
   }
 
   /**
-   * Get download URL for a specific ebook
+   * Get ebook metadata (page count, format info, etc.)
    */
-  async getEbookDownloadUrl(fileId: string): Promise<string> {
+  async getEbookMetadata(fileId: string): Promise<any> {
     try {
-      const response = await apiClient.get<EbookDownloadResponse>(`/hubspot/ebooks/${fileId}/download`);
+      const response = await apiClient.get<EbookMetadataResponse>(`/hubspot/ebooks/${fileId}/metadata`);
       
-      if (response.data.success) {
-        return response.data.data.downloadUrl;
+      if (response.success) {
+        return response.data;
       }
       
-      throw new Error(response.data.message || 'Failed to get download URL');
+      throw new Error(response.data.message || 'Failed to get ebook metadata');
     } catch (error) {
-      console.error('Error getting ebook download URL:', error);
+      console.error('Error getting ebook metadata:', error);
       throw error;
     }
   }
 
   /**
-   * Download an ebook (opens in new tab)
+   * Get a specific page of an ebook
    */
-  async downloadEbook(fileId: string, fileName?: string): Promise<void> {
+  async getEbookPage(fileId: string, pageNumber: number, format: string = 'image'): Promise<PageData> {
     try {
-      const downloadUrl = await this.getEbookDownloadUrl(fileId);
+      const response = await apiClient.get<PageDataResponse>(
+        `/hubspot/ebooks/${fileId}/stream?page=${pageNumber}&format=${format}`
+      );
       
-      // Create a temporary link and click it to trigger download
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.target = '_blank';
-      link.download = fileName || 'ebook';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      
+      throw new Error(response.data.message || 'Failed to get ebook page');
     } catch (error) {
-      console.error('Error downloading ebook:', error);
+      console.error('Error getting ebook page:', error);
       throw error;
     }
   }
 
   /**
-   * Get ebook file size in human readable format
+   * Format file size for display
    */
   formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
@@ -145,11 +167,28 @@ export class EbooksService {
   }
 
   /**
-   * Get file extension icon/type
+   * Format reading time for display
    */
-  getFileTypeIcon(extension: string): string {
-    const ext = extension.toLowerCase();
-    switch (ext) {
+  formatReadingTime(minutes: number): string {
+    if (minutes < 60) {
+      return `${minutes} min read`;
+    }
+    
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    
+    if (remainingMinutes === 0) {
+      return `${hours}h read`;
+    }
+    
+    return `${hours}h ${remainingMinutes}m read`;
+  }
+
+  /**
+   * Get file type icon emoji
+   */
+  getFileIcon(extension: string): string {
+    switch (extension.toLowerCase()) {
       case 'pdf':
         return '📄';
       case 'epub':
@@ -162,9 +201,26 @@ export class EbooksService {
         return '📄';
     }
   }
+
+  /**
+   * Generate clean ebook details from filename
+   */
+  generateEbookDetails(name: string) {
+    // Remove file extension and clean up the name
+    const cleanName = name.replace(/\.(pdf|epub|mobi|azw3?|doc|docx)$/i, '');
+    
+    // Split by common separators and take the first part as title
+    const parts = cleanName.split(/[-_\s]+/);
+    const title = parts.slice(0, 3).join(' ');
+    
+    return {
+      title: cleanName,
+      description: `Comprehensive guide and insights on ${title.toLowerCase()}`,
+      subtitle: "Expert knowledge and strategies to enhance your understanding."
+    };
+  }
 }
 
-// Create a singleton instance
-export const ebooksService = new EbooksService();
-
+// Create and export default instance
+const ebooksService = new EbooksService();
 export default ebooksService;
