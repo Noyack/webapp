@@ -232,46 +232,6 @@ const Ebook = () => {
             )}
           </>
         )}
-
-        {/* Info Section */}
-        <div className="mt-16 bg-white rounded-xl shadow-lg p-8">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              🔒 Secure Reading Experience
-            </h2>
-            <p className="text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Our ebooks are protected and can only be read within our secure reader. 
-              This ensures content security while providing you with a great reading experience 
-              featuring page navigation, zoom controls, dark mode, and more.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <BookOpen className="w-6 h-6 text-blue-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Interactive Reader</h3>
-              <p className="text-gray-600 text-sm">Full-featured reading experience with zoom, navigation, and bookmarks</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <div className="text-green-600 font-bold">🔒</div>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Secure Access</h3>
-              <p className="text-gray-600 text-sm">Content is streamed securely and cannot be downloaded or copied</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <div className="text-purple-600 font-bold">📱</div>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Multi-Device</h3>
-              <p className="text-gray-600 text-sm">Read on any device with responsive design and touch support</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
