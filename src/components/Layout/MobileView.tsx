@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom';
 import { useContext, useEffect } from 'react';
 import { ViewContext } from '../../context/ViewContext';
 import MobileNav from './MobileNav';
+import { Box, Typography } from '@mui/material';
 
 export default function MobileView({ children }: DesktopLayoutProps) {
   const location = useLocation();
@@ -28,7 +29,10 @@ export default function MobileView({ children }: DesktopLayoutProps) {
     <div className="flex flex-col bg-gray-100 h-[100vh] w-full">
       {/* Header with user profile and notification elements - Fixed at top with safe area */}
       <div className="sticky top-0 z-20 bg-gray-10 backdrop-blur-lg">
-        <div className="flex justify-end items-center p-2 w-full">
+       <Box bgcolor={"#1C398E"} p={1} position={"absolute"} top={0} left={0} width={"50dvw"} zIndex={0}>
+          <Typography fontSize={14} color='#fff' textAlign={'center'}>Noyack is currently in Beta, you have full access to the platform</Typography>
+        </Box>
+        <div className="flex justify-end items-center py-2 w-full">
           <div className="flex content-center gap-2 items-center">
             {/* <div className='flex justify-center items-center bg-white w-[40px] h-[40px] rounded-full shadow-xl'>
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 32 32" fill="none">

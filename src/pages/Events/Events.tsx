@@ -1,27 +1,37 @@
-// src/pages/Events/Events.tsx - Fix the filter error
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, MapPin, Users, Play, ExternalLink, Filter, Search, Share, BookmarkPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 import Backdrop from '../../assets/NOYACK Logo transparent background .png'
 import hubspotService from '../../services/hubspot.service';
 import LoadingSpinner from '../../components/UI/Loader';
 
-// Types for our events and social media
 interface Event {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  type: 'webinar' | 'workshop' | 'masterclass' | 'networking' | 'conference';
-  status: 'UPCOMING' | 'PAST' | 'live';
-  imageUrl: string;
-  videoUrl?: string;
-  registrationUrl?: string;
-  attendeeCount?: number;
-  maxAttendees?: number;
-  tags: string[];
+  eventName: string;
+  eventType: string;
+  startDateTime: string;
+  endDateTime: string;
+  eventOrganizer: string;
+  eventDescription: string | null;
+  eventUrl: string;
+  eventCancelled: boolean;
+  eventCompleted: boolean;
+  customProperties: CustomProperty[];
+  objectId: string;
+  externalEventId: string;
+  eventStatus: 'UPCOMING' | 'PAST' | 'LIVE';
+  appInfo: {
+    id: string;
+    name: string;
+  };
+  registrants: number;
+  attendees: number;
+  cancellations: number;
+  noShows: number;
+  createdAt: string;
+  updatedAt: string;
+  
+  // Optional computed fields for display
+  displayDate?: string;
+  displayTime?: string;
   speaker?: {
     name: string;
     title: string;
@@ -29,54 +39,10 @@ interface Event {
   };
 }
 
-interface SocialPost {
-  id: string;
-  platform: 'linkedin' | 'twitter';
-  content: string;
-  author: string;
-  authorImage: string;
-  date: string;
-  likes: number;
-  shares: number;
-  url: string;
-  mediaUrl?: string;
+interface CustomProperty {
+  name: string;
+  value: string;
 }
-
-const mockSocialPosts: SocialPost[] = [
-  {
-    id: '1',
-    platform: 'linkedin',
-    content: 'Great insights from our latest investment webinar! The discussion on ESG investing was particularly enlightening. Looking forward to implementing these strategies.',
-    author: 'Jennifer Walsh',
-    authorImage: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50',
-    date: '2025-01-20',
-    likes: 45,
-    shares: 12,
-    url: '#'
-  },
-  {
-    id: '2',
-    platform: 'twitter',
-    content: 'Just attended @NoyackWealth webinar on retirement planning. Mind = blown 🤯 The FIRE calculator they shared is a game changer! #FinancialPlanning #FIRE',
-    author: 'Alex Thompson',
-    authorImage: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50',
-    date: '2025-01-19',
-    likes: 23,
-    shares: 8,
-    url: '#'
-  },
-  {
-    id: '3',
-    platform: 'linkedin',
-    content: 'The networking session after the Noyack wealth management workshop was incredible. Connected with so many like-minded investors!',
-    author: 'Maria Garcia',
-    authorImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b742?w=50',
-    date: '2025-01-18',
-    likes: 67,
-    shares: 15,
-    url: '#'
-  }
-];
 
 const EventsPage = () => {
   // Initialize events as empty array to prevent undefined errors
@@ -87,10 +53,6 @@ const EventsPage = () => {
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDateEvents, setSelectedDateEvents] = useState<Event[]>([]);
-  const [showDatePopup, setShowDatePopup] = useState(false);
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>('');
   const hasLoadedRef = useRef(false);
   const [fetching, setFetching] = useState<boolean>(false);
 
@@ -107,22 +69,18 @@ const EventsPage = () => {
         const response = await hubspotService.getAllEvents();
         
         if (response && response.results) {
-          // Transform HubSpot events to our Event interface
-          const transformedEvents: Event[] = response.results.map((hubspotEvent: any) => ({
-            id: hubspotEvent.id || hubspotEvent.objectId || Math.random().toString(),
-            title: hubspotEvent.eventName || 'Unnamed Event',
-            description: hubspotEvent.eventDescription || 'No description available',
-            date: hubspotEvent.startDateTime ? hubspotEvent.startDateTime.split('T')[0] : new Date().toISOString().split('T')[0],
-            time: hubspotEvent.startDateTime ? new Date(hubspotEvent.startDateTime).toLocaleTimeString() : '12:00 PM',
-            location: hubspotEvent.eventUrl || 'Online',
-            type: determineEventType(hubspotEvent.eventType || 'webinar'),
-            status: determineEventStatus(hubspotEvent.startDateTime),
-            imageUrl: hubspotEvent.eventUrl || Backdrop,
-            videoUrl: hubspotEvent.eventUrl,
-            registrationUrl: hubspotEvent.eventUrl,
-            attendeeCount: hubspotEvent.registrants || 0,
-            maxAttendees: hubspotEvent.registrants || 100,
-            tags: hubspotEvent.customProperties ? Object.keys(hubspotEvent.customProperties) : ['webinar'],
+          // Add computed display fields and ensure proper status
+          const eventsWithDisplayFields: Event[] = response.results.map((hubspotEvent: any) => ({
+            ...hubspotEvent,
+            // Ensure eventStatus is properly set
+            eventStatus: determineEventStatus(hubspotEvent.startDateTime),
+            // Add computed display fields
+            displayDate: hubspotEvent.startDateTime ? 
+              hubspotEvent.startDateTime.split('T')[0] : 
+              new Date().toISOString().split('T')[0],
+            displayTime: hubspotEvent.startDateTime ? 
+              new Date(hubspotEvent.startDateTime).toLocaleTimeString() : 
+              '12:00 PM',
             speaker: {
               name: hubspotEvent.eventOrganizer || 'Noyack Team',
               title: 'Financial Advisor',
@@ -130,8 +88,8 @@ const EventsPage = () => {
             }
           }));
           
-          console.log('Transformed events:', transformedEvents);
-          setEvents(transformedEvents);
+          console.log('Events with display fields:', eventsWithDisplayFields);
+          setEvents(eventsWithDisplayFields);
         } else {
           console.log('No events found, using empty array');
           setEvents([]);
@@ -148,19 +106,7 @@ const EventsPage = () => {
     loadEvents();
   }, []);
 
-  // Helper functions
-  const determineEventType = (hubspotType: string): Event['type'] => {
-    const typeMap: { [key: string]: Event['type'] } = {
-      'webinar': 'webinar',
-      'workshop': 'workshop',
-      'masterclass': 'masterclass',
-      'networking': 'networking',
-      'conference': 'conference'
-    };
-    return typeMap[hubspotType.toLowerCase()] || 'webinar';
-  };
-
-  const determineEventStatus = (startDateTime: string): Event['status'] => {
+  const determineEventStatus = (startDateTime: string): Event['eventStatus'] => {
     if (!startDateTime) return 'UPCOMING';
     const eventDate = new Date(startDateTime);
     const now = new Date();
@@ -181,15 +127,15 @@ const EventsPage = () => {
     try {
       // Filter by tab (status)
       filtered = filtered.filter(event => {
-        if (!event || !event.status) return false;
-        return event.status === activeTab;
+        if (!event || !event.eventStatus) return false;
+        return event.eventStatus === activeTab;
       });
 
       // Filter by type
       if (selectedFilter !== 'all') {
         filtered = filtered.filter(event => {
-          if (!event || !event.type) return false;
-          return event.type === selectedFilter;
+          if (!event || !event.eventType) return false;
+          return event.eventType.toLowerCase() === selectedFilter.toLowerCase();
         });
       }
 
@@ -199,14 +145,14 @@ const EventsPage = () => {
         filtered = filtered.filter(event => {
           if (!event) return false;
           
-          const title = (event.title || '').toLowerCase();
-          const description = (event.description || '').toLowerCase();
-          const tags = Array.isArray(event.tags) ? event.tags : [];
+          const name = (event.eventName || '').toLowerCase();
+          const description = (event.eventDescription || '').toLowerCase();
+          const organizer = (event.eventOrganizer || '').toLowerCase();
           
           return (
-            title.includes(searchLower) ||
+            name.includes(searchLower) ||
             description.includes(searchLower) ||
-            tags.some(tag => (tag || '').toLowerCase().includes(searchLower))
+            organizer.includes(searchLower)
           );
         });
       }
@@ -223,11 +169,11 @@ const EventsPage = () => {
   const EventCard = ({ event }: { event: Event }) => {
     const getEventTypeColor = (type: string) => {
       const colors = {
-        webinar: 'bg-blue-100 text-blue-800',
-        workshop: 'bg-green-100 text-green-800',
-        masterclass: 'bg-purple-100 text-purple-800',
-        networking: 'bg-orange-100 text-orange-800',
-        conference: 'bg-red-100 text-red-800'
+        WEBINAR: 'bg-blue-100 text-blue-800',
+        WORKSHOP: 'bg-green-100 text-green-800',
+        MASTERCLASS: 'bg-purple-100 text-purple-800',
+        CLASSIC: 'bg-red-100 text-red-800',
+        'Onsite - In Person': 'bg-green-100 text-green-800'
       };
       return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
     };
@@ -237,7 +183,8 @@ const EventsPage = () => {
         return new Date(dateString).toLocaleDateString('en-US', {
           weekday: 'short',
           month: 'short',
-          day: 'numeric'
+          day: 'numeric',
+          year: 'numeric'
         });
       } catch {
         return 'Invalid Date';
@@ -248,19 +195,19 @@ const EventsPage = () => {
       <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
         <div className="relative">
           <img 
-            src={event.imageUrl || Backdrop} 
-            alt={event.title}
+            src={event.eventUrl || Backdrop} 
+            alt={event.eventName}
             className="w-full h-48 object-cover"
             onError={(e) => {
               e.currentTarget.src = Backdrop;
             }}
           />
           <div className="absolute top-4 left-4">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getEventTypeColor(event.type)}`}>
-              {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getEventTypeColor(event.eventType)}`}>
+              {event.eventType}
             </span>
           </div>
-          {event.status === 'live' && (
+          {event.eventStatus === 'LIVE' && (
             <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
               <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
               LIVE
@@ -271,49 +218,41 @@ const EventsPage = () => {
         <div className="p-6">
           <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
             <Calendar className="w-4 h-4" />
-            <span>{formatDate(event.date)}</span>
+            <span>{formatDate(event.startDateTime)}</span>
             <Clock className="w-4 h-4 ml-2" />
-            <span>{event.time}</span>
+            <span>{event.displayTime}</span>
           </div>
           
           <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">
-            {event.title}
+            {event.eventName}
           </h3>
           
           <p className="text-gray-600 mb-4 line-clamp-2">
-            {event.description}
+            {event.eventDescription || 'No description available'}
           </p>
           
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <MapPin className="w-4 h-4" />
-              <span className="truncate">{event.location}</span>
+              <span className="truncate">{event.eventUrl}</span>
             </div>
             
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-gray-500" />
               <span className="text-sm text-gray-600">
-                {event.attendeeCount || 0}
-                {event.maxAttendees && ` / ${event.maxAttendees}`}
+                {event.registrants || 0} registered
               </span>
             </div>
           </div>
           
           <div className="flex gap-2 mt-4">
-            {event.status === 'UPCOMING' && event.registrationUrl && (
+            {event.eventStatus === 'UPCOMING' && event.eventUrl && (
               <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium">
                 Register
               </button>
             )}
             
-            {event.status === 'PAST' && event.videoUrl && (
-              <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
-                <Play className="w-4 h-4" />
-                Watch
-              </button>
-            )}
-            
-            <button 
+            {event.eventStatus !== 'PAST' && <button 
               onClick={() => {
                 setSelectedEvent(event);
                 setShowEventModal(true);
@@ -321,7 +260,7 @@ const EventsPage = () => {
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
             >
               Details
-            </button>
+            </button>}
           </div>
         </div>
       </div>
@@ -337,7 +276,7 @@ const EventsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 space-y-8">
+    <div className=" bg-gray-50 p-6 space-y-8">
       {/* Header */}
       <div className="text-center">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -371,10 +310,8 @@ const EventsPage = () => {
             >
               <option value="all">All Types</option>
               <option value="webinar">Webinars</option>
-              <option value="workshop">Workshops</option>
-              <option value="masterclass">Masterclasses</option>
-              <option value="networking">Networking</option>
-              <option value="conference">Conferences</option>
+              <option value="classic">Classic</option>
+              <option value="onsite - in person">In Person</option>
             </select>
           </div>
         </div>
@@ -387,12 +324,12 @@ const EventsPage = () => {
             { 
               id: 'UPCOMING', 
               label: 'Upcoming Events', 
-              count: Array.isArray(events) ? events.filter(e => e && e.status === 'UPCOMING').length : 0 
+              count: Array.isArray(events) ? events.filter(e => e && e.eventStatus === 'UPCOMING').length : 0 
             },
             { 
               id: 'PAST', 
               label: 'Past Events', 
-              count: Array.isArray(events) ? events.filter(e => e && e.status === 'PAST').length : 0 
+              count: Array.isArray(events) ? events.filter(e => e && e.eventStatus === 'PAST').length : 0 
             }
           ].map((tab) => (
             <button
@@ -418,9 +355,22 @@ const EventsPage = () => {
         {/* Main Content */}
         <div className="lg:col-span-4">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {Array.isArray(filteredEvents) && filteredEvents.map((event, i) => (
-              <EventCard key={event?.id || i} event={event} />
-            ))}
+            {Array.isArray(filteredEvents) && [...filteredEvents]
+              .sort((a, b) => {
+                const dateA = new Date(a.startDateTime);
+                const dateB = new Date(b.startDateTime);
+                
+                if (activeTab === 'UPCOMING') {
+                  // For upcoming events: earliest first (ascending)
+                  return dateA.getTime() - dateB.getTime();
+                } else {
+                  // For past events: most recent first (descending)
+                  return dateB.getTime() - dateA.getTime();
+                }
+              })
+              .map((event, i) => (
+                <EventCard key={event?.objectId || i} event={event} />
+              ))}
             
             {(!Array.isArray(filteredEvents) || filteredEvents.length === 0) && (
               <div className="col-span-full text-center py-12">
@@ -455,21 +405,21 @@ const EventsPage = () => {
             <div className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800`}>
-                  {selectedEvent.type.charAt(0).toUpperCase() + selectedEvent.type.slice(1)}
+                  {selectedEvent.eventType}
                 </span>
                 <span className="text-sm text-gray-600">
-                  {selectedEvent.date} • {selectedEvent.time}
+                  {selectedEvent.displayDate} • {selectedEvent.displayTime}
                 </span>
               </div>
               
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">{selectedEvent.title}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">{selectedEvent.eventName}</h2>
               
-              <p className="text-gray-700 mb-6">{selectedEvent.description}</p>
+              <p className="text-gray-700 mb-6">{selectedEvent.eventDescription}</p>
               
               <div className="space-y-4 mb-6">
                 <div className="flex items-center gap-3">
                   <MapPin className="w-5 h-5 text-gray-500" />
-                  <span>{selectedEvent.location}</span>
+                  <span>{selectedEvent.eventUrl}</span>
                 </div>
                 
                 {selectedEvent.speaker && (
@@ -489,32 +439,32 @@ const EventsPage = () => {
                 <div className="flex items-center gap-3">
                   <Users className="w-5 h-5 text-gray-500" />
                   <span>
-                    {selectedEvent.status === 'UPCOMING' 
-                      ? `${selectedEvent.attendeeCount}/${selectedEvent.maxAttendees} registered`
-                      : `${selectedEvent.attendeeCount} attended`
+                    {selectedEvent.eventStatus === 'UPCOMING' 
+                      ? `${selectedEvent.registrants} registered`
+                      : `${selectedEvent.attendees} attended`
                     }
                   </span>
                 </div>
               </div>
               
-              {Array.isArray(selectedEvent.tags) && selectedEvent.tags.length > 0 && (
+              {Array.isArray(selectedEvent.customProperties) && selectedEvent.customProperties.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6">
-                  {selectedEvent.tags.map((tag, index) => (
+                  {selectedEvent.customProperties.map((prop, index) => (
                     <span key={index} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
-                      {tag}
+                      {prop.name}: {prop.value}
                     </span>
                   ))}
                 </div>
               )}
               
               <div className="flex gap-3">
-                {selectedEvent.status === 'UPCOMING' && selectedEvent.registrationUrl && (
+                {selectedEvent.eventStatus === 'UPCOMING' && selectedEvent.eventUrl && (
                   <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-medium">
                     Register Now
                   </button>
                 )}
                 
-                {selectedEvent.status === 'PAST' && selectedEvent.videoUrl && (
+                {selectedEvent.eventStatus === 'PAST' && selectedEvent.eventUrl && (
                   <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center gap-2">
                     <Play className="w-5 h-5" />
                     Watch Recording

@@ -1,10 +1,11 @@
 import { useContext, useState } from 'react'
-import { Typography, Button, RadioGroup, FormControlLabel, Radio, Stepper, Step, StepLabel } from '@mui/material'
+import { Typography, Button, RadioGroup, FormControlLabel, Radio, Stepper, Step, StepLabel, Input, Checkbox, FormGroup } from '@mui/material'
 import Logo from '../assets/noyackLogo.png'
 import { UserCreationData, LocationData, RiskTolerance, SubscriptionPlan } from '../types'
 import {  authService } from '../services'
 import { UserContext } from '../context/UserContext'
 import { cityData, usStates } from '../utils/locationData'
+import { CheckBox } from '@mui/icons-material'
 
 // Sample country list for dropdown
 const COUNTRIES = [
@@ -74,6 +75,7 @@ function Creation({isMobile}:{isMobile:boolean}) {
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState<boolean>(false);
   const [postalCodeError, setPostalCodeError] = useState<string>('');
+  const [agree, setAgree] = useState<boolean>(false)
 
   // const [seleted] = useState([])
   
@@ -251,7 +253,11 @@ const handlePostalCodeChange = (value: string) => {
       if (activeStep < steps.length - 1) {
         handleNext();
       } else {
-        handleSubmit();
+        if(agree)
+          handleSubmit();
+        else{
+          setError("Please agree to these terms to sign up for the beta ")
+        }
       }
     }
   };
@@ -259,18 +265,16 @@ const handlePostalCodeChange = (value: string) => {
   // Handle final submission
   const handleSubmit = async () => {
     try {
+      
       setLoading(true);
       setError(null);
       if(userInfo?.id){
-      console.log(userInfo.id)	
-	 await authService.completeOnboarding(userInfo.id, userData) 
+    	  await authService.completeOnboarding(userInfo.id, userData) 
 	 
 	 // Handle plan-specific logic
         if (userData.selectedPlan === 'community') {
-          console.log('Redirecting to Community subscription checkout');
           // window.location.href = 'your-stripe-checkout-url-for-subscription';
         } else if (userData.selectedPlan === 'investor') {
-          console.log('Redirecting to Investment checkout');
           // window.location.href = 'your-stripe-checkout-url-for-investment';
         }
       }
@@ -280,7 +284,6 @@ const handlePostalCodeChange = (value: string) => {
       setLoading(false);
       window.location.reload()
     } catch (error) {
-      console.error("Error creating user profile:", error);
       setError("Failed to create your profile. Please try again.");
       setLoading(false);
     }
@@ -499,19 +502,22 @@ const handlePostalCodeChange = (value: string) => {
       case 3: // Plan Selection Step
         return (
           <div className='flex flex-col gap-[13px]'>
+            
             <Typography variant="h6" className="text-[#011E5A] mb-4">Choose Your Plan</Typography>
             
             {/* Plan recommendation based on investment goals */}
             {userData.investmentGoals && userData.investmentGoals.length > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
                 <Typography variant="body2" className="text-blue-800 font-medium mb-1">
-                  💡 Based on your goals: {userData.investmentGoals.slice(0, 2).join(', ')}
+                  💡 Based on your goals: {userData.investmentGoals.slice(0, 2).join(', ')}, accreditation status
                   {userData.investmentGoals.length > 2 && ` +${userData.investmentGoals.length - 2} more`}
                 </Typography>
                 <Typography variant="body2" className="text-blue-700 text-sm">
-                  {userData.investmentGoals.includes('Wealth Growth') || userData.investmentGoals.includes('Portfolio Diversification') 
-                    ? "We recommend the Investor plan for advanced portfolio analysis."
-                    : "The Community plan gives you access to financial tools and bank connections."}
+                  {(userData.investmentGoals.includes('Wealth Growth') || userData.investmentGoals.includes('Portfolio Diversification'))
+                  &&
+                  (userData.investmentAccreditation)
+                    ? "We recommend the Investor plan"
+                    : "The Community plan gives you access to financial tools and bank connections to start your journey."}
                 </Typography>
               </div>
             )}
@@ -649,16 +655,17 @@ const handlePostalCodeChange = (value: string) => {
                 </div>
               </div>
             </div>
-
-            {/* Skip option */}
-            <div className="text-center pt-2">
-              <button 
-                // onClick={() => handleChange('selectedPlan', 'free')}
-                className="text-xs text-gray-500 hover:text-gray-700 underline"
-              >
-                Skip for now (start with Free plan)
-              </button>
-            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+              <FormGroup>
+                <FormControlLabel control={<Checkbox value={agree} onChange={(e)=>setAgree(e.currentTarget.checked)} />} label="I agree to the following conditions" />
+                <Typography variant="body2" className="font-medium mb-1">
+                  Noyack is currently in Beta. By signing up now, you'll receive full access to the platform until launch. After launch, you'll be moved to a one-month free trial.
+                </Typography>
+                <Typography variant="caption" className="font-medium mb-1">
+                  We will never charge you without prior notice or your consent.
+                </Typography>
+              </FormGroup>
+              </div>
           </div>
         );
         
