@@ -54,7 +54,7 @@ function BasicInfo() {
   const { userInfo } = useContext(UserContext)
 
   // Initial form state
-  const [formData, setFormData] = useState<PersonalInfoForm>({
+  const [formData, setFormData] = useState<PersonalInfoForm | null>({
     // Age and Retirement
     currentAge: 0,
     expectedRetirementAge: 0,
@@ -106,6 +106,44 @@ function BasicInfo() {
   }, []);
 
   const handleIsEditing = () =>{
+    if(formData=== null){setFormData({
+    currentAge: 0,
+    expectedRetirementAge: 0,
+
+    // Marital Status and Family
+    maritalStatus: "single",
+    spouseAge: undefined,
+    dependentsCount: 0,
+    dependentAges: "",
+    supportingParents: false,
+    supportingAdultChildren: false,
+    supportingOtherRelatives: false,
+
+    // Employment
+    employmentStatus: "employed",
+    profession: "",
+    yearsInPosition: 0,
+    expectedCareerChange: "None expected",
+    careerChangeYears: undefined,
+    hasPension: false,
+    has401kMatch: false,
+    hasStockOptions: false,
+
+    // Health
+    healthStatus: "good",
+    familyHealthConcerns: [],
+    medicalConditions: [],
+    otherMedicalConditions: "",
+    futureCareNeeds: [],
+    longTermCare: 1,
+
+    // Risk Tolerance
+    riskTolerance: 1,
+    investmentResponse: "Wait and see",
+    investmentExperience: [],
+    majorInvestmentTimeHorizon: 1,
+    lifestyleSacrifice: 1,
+  })}
     setIsEditing(!isEditing)
   }
 
@@ -153,6 +191,15 @@ function BasicInfo() {
           hasStockOptions: data.hasStockOptions ?? formData.hasStockOptions,
           healthStatus: data.healthStatus ?? formData.healthStatus,
           riskTolerance: data.riskTolerance ?? formData.riskTolerance,
+          majorInvestmentTimeHorizon: data.majorInvestmentTimeHorizon,
+          lifestyleSacrifice: data.riskTolerance,
+          longTermCare: data.longTermCare,
+          futureCareNeeds: data.futureCareNeeds,
+          investmentResponse: data.investmentResponse,
+          otherMedicalConditions: data.otherMedicalConditions,
+          supportingAdultChildren: data.supportingAdultChildren,
+          supportingOtherRelatives: data.supportingOtherRelatives,
+          supportingParents:data.supportingParents,
           
           // Parse JSON fields
           familyHealthConcerns: safeParseJson(data.familyHealthConcerns),
@@ -162,6 +209,7 @@ function BasicInfo() {
       }
     } catch (err) {
       console.error('Error fetching basic info:', err);
+      setFormData(null)
       // It's okay if no data exists yet
     } finally {
       setLoading(false);
@@ -829,7 +877,7 @@ function BasicInfo() {
           </Box>
         </form>
       ) : (
-        <div>
+        formData?<div>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
             <Button variant="outlined" color="primary" onClick={()=>handleIsEditing()}>
               Edit Information
@@ -882,7 +930,17 @@ function BasicInfo() {
               <Info label="Lifestyle Sacrifice" value={`${formData.lifestyleSacrifice}/5`} />
             </div>
           </Paper>
-        </div>
+        </div>:
+          <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+            <Typography variant="body1" color="text.secondary" sx={{ my: 4, textAlign: 'center' }}>
+            No information found. Click below to start adding basic information.
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <Button variant="contained" color="primary" onClick={()=>handleIsEditing()}>
+              Add Information
+            </Button>
+          </Box>
+          </Paper>
       )}
     </Box>
   );
