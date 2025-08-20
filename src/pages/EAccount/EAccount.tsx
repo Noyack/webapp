@@ -227,79 +227,79 @@ const EAccount: React.FC = () => {
   });
 
   const handleFinalSubmit = async (values: FormData) => {
-    setIsSubmitting(true);
-    setSubmitError('');
-    
-    try {
-      // Get auth token from Clerk
-      const token = await getToken();
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-      // Transform form data to match backend interface
-      const accountData: AccountFormData = {
-        firstName: values.firstName,
-        lastName: values.lastName,
-        dateOfBirth: values.dateOfBirth,
-        ssn: values.ssn,
-        married: false, // You can add this field if needed
-        minor: false,
-        legalAddress: values.legalAddress,
-        city: values.city,
-        state: values.state,
-        zipCode: values.zipCode,
-        mailingAddress: sameAsLegal ? values.legalAddress : values.mailingAddress,
-        mailingCity: sameAsLegal ? values.city : values.mailingCity,
-        mailingState: sameAsLegal ? values.state : values.mailingState,
-        mailingZipCode: sameAsLegal ? values.zipCode : values.mailingZipCode,
-        phoneNumber: values.phoneNumber,
-        email: userInfo?.email || '',
-        employerName: values.employerName,
-        employerAddress: values.employerAddress,
-        citizenship: values.citizenship,
-        identificationType: values.identificationType,
-        idNumber: values.idNumber,
-        issueDate: values.issueDate,
-        expirationDate: values.expirationDate,
-        stateOfIssuance: values.stateOfIssuance,
-        iraType: values.iraType,
-        accountPurpose: values.accountPurpose,
-        initialSourceOfFunds: values.initialSourceOfFunds,
-        ongoingSourceOfFunds: values.ongoingSourceOfFunds,
-        fundingMethod: values.fundingMethod,
-        estimatedFundingAmount: values.estimatedFundingAmount,
-        paymentMethod: values.paymentMethod,
-        statementPreference: values.statementPreference,
-        employmentStatus: values.employmentStatus,
-        occupationCategory: values.occupationCategory,
-        occupation: values.occupation,
-        investmentTypes: {
-          Traditional: true,
-          Alternative: false,
-          Digital: false,
-          Metals: false,
-        },
-        beneficiaries: [], // You can add beneficiary collection if needed
-      };
-
-      // Submit to backend
-      const response = await equityTrustService.openAccount(accountData, '3');
-      
-      setApplicationNumber(response.accountNumber);
-      setActivityId(response.activityId);
-      setActiveStep(activeStep + 1);
-      
-      // Optionally store account info in local state/context for use in other components
-      localStorage.setItem('userAccountNumber', response.accountNumber);
-      localStorage.setItem('userActivityId', response.activityId);
-      
-    } catch (error) {
-      console.error('Account opening error:', error);
-      setSubmitError(error instanceof Error ? error.message : 'Failed to open account');
-    } finally {
-      setIsSubmitting(false);
+  setIsSubmitting(true);
+  setSubmitError('');
+  
+  try {
+    // Get auth token from Clerk
+    const token = await getToken();
+    if (!token) {
+      throw new Error('Authentication required');
     }
-  };
+    
+    // Transform form data to match AccountFormData interface
+    const accountData: AccountFormData = {
+      firstName: values.firstName,
+      lastName: values.lastName,
+      dateOfBirth: values.dateOfBirth,
+      ssn: values.ssn,
+      married: false,
+      minor: false,
+      legalAddress: values.legalAddress,
+      city: values.city,
+      state: values.state,
+      zipCode: values.zipCode,
+      mailingAddress: sameAsLegal ? values.legalAddress : values.mailingAddress,
+      mailingCity: sameAsLegal ? values.city : values.mailingCity,
+      mailingState: sameAsLegal ? values.state : values.mailingState,
+      mailingZipCode: sameAsLegal ? values.zipCode : values.mailingZipCode,
+      phoneNumber: values.phoneNumber,
+      email: userInfo?.email || '',
+      employerName: values.employerName,
+      employerAddress: values.employerAddress,
+      citizenship: values.citizenship,
+      identificationType: values.identificationType,
+      idNumber: values.idNumber,
+      issueDate: values.issueDate,
+      expirationDate: values.expirationDate,
+      stateOfIssuance: values.stateOfIssuance,
+      iraType: values.iraType,
+      accountPurpose: values.accountPurpose,
+      initialSourceOfFunds: values.initialSourceOfFunds,
+      ongoingSourceOfFunds: values.ongoingSourceOfFunds,
+      fundingMethod: values.fundingMethod,
+      estimatedFundingAmount: values.estimatedFundingAmount,
+      paymentMethod: values.paymentMethod,
+      statementPreference: values.statementPreference,
+      employmentStatus: values.employmentStatus,
+      occupationCategory: values.occupationCategory,
+      occupation: values.occupation,
+      investmentTypes: {
+        Traditional: true,
+        Alternative: false,
+        Digital: false,
+        Metals: false,
+      },
+      beneficiaries: [],
+    };
+
+    // The service will now handle all the transformation
+    const response = await equityTrustService.openAccount(accountData, '3');
+    
+    setApplicationNumber(response.accountNumber);
+    setActivityId(response.activityId);
+    setActiveStep(activeStep + 1);
+    
+    localStorage.setItem('userAccountNumber', response.accountNumber);
+    localStorage.setItem('userActivityId', response.activityId);
+    
+  } catch (error) {
+    console.error('Account opening error:', error);
+    setSubmitError(error instanceof Error ? error.message : 'Failed to open account');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // Format phone number as user types
   const formatPhoneNumber = (value: string) => {

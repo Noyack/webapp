@@ -173,9 +173,6 @@ function Wealthview() {
         }));
       }
     };
-    useEffect(() => {
-      console.log(plaidInfo)
-    }, [plaidInfo]);
 
       const fetchIq = async() =>{
         const res:WealthIq[] = await authService.getWealthIQ()

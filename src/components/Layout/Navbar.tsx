@@ -89,17 +89,13 @@ function InvestNav() {
         <BiSolidDashboard style={{width:28, height:28}} />
         Dashboard
       </Link>
-      <Link to="/account" className={getNavLinkClass('/account')}>
-        <RiAccountBoxFill style={{width:28, height:28}} />
-        Account
+      <Link to="/wallet" className={getNavLinkClass('/wallet')}>
+        <IoWallet style={{width:28, height:28}} />
+        Wallet
       </Link>
       <Link to="/invest" className={getNavLinkClass('/invest')}>
         <FaMoneyBillTransfer style={{width:28, height:28}} />
         Invest
-      </Link>
-      <Link to="/wallet" className={getNavLinkClass('/wallet')}>
-        <IoWallet style={{width:28, height:28}} />
-        Wallet
       </Link>
       <Link to="/funding" className={getNavLinkClass('/funding')}>
         <RiRefund2Fill style={{width:28, height:28}} />

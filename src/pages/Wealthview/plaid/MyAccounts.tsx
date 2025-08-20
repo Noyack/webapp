@@ -22,7 +22,6 @@ const MyAccounts = () => {
   const [accountsData, setAccountsData] = useState<AccountsResponse>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  console.log(accountsData)
   useEffect(() => {
         const currentUserId = userInfo?.id;
         if (currentUserId && !plaidInfo?.noAccount) {
