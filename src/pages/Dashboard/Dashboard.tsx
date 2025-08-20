@@ -118,8 +118,8 @@ const Dashboard = () => {
     return(<LoadingSpinner />)
 
   return (
-    <div className="flex justify-center">
-      <div className="flex flex-col gap-10 px-2">
+    <div className="flex justify-center ">
+      <div className="flex flex-col gap-10 px-2 min-w-[50dvw]">
         {/* <FundStatus statusElements={statusElements} /> */}
         <WealthStatus wealth={wealth} />
         <div>

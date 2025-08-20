@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { Paper, Box, Typography, Tabs, Tab } from '@mui/material';
 
 import UserIdentityInfo from './Identify';
@@ -6,11 +6,13 @@ import InvestmentPortfolio from './InvestmentPortfolio';
 import LiabilitiesDisplay from './Liabilities';
 import MyAccounts from './MyAccounts';
 import Transactions from './Transactions';
+import { PlaidContext } from '../../../context/PlaidContext';
 
 type TabType = 'accounts' | 'transactions' | 'identity' | 'investment' | 'liability';
 
 const PlaidDashboard = () => {
   const [activeTab, setActiveTab] = useState<TabType>('accounts');
+  const { plaidInfo } = useContext(PlaidContext)
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: TabType) => {
     setActiveTab(newValue);
@@ -37,7 +39,7 @@ const PlaidDashboard = () => {
     { label: "Accounts", value: "accounts" },
     { label: "Recent Transactions", value: "transactions" },
     { label: "Identity", value: "identity" },
-    { label: "Investment", value: "investment" },
+    // { label: "Investment", value: "investment" },
     // { label: "Liability", value: "liability" }
   ];
 
@@ -56,37 +58,47 @@ const PlaidDashboard = () => {
         <Typography variant="h5" className="text-2xl font-semibold text-gray-800">
           Your Financial Dashboard
         </Typography>
+        <Typography variant='caption'>**To delete any account, please contact us through the support page</Typography>
       </Box>
+      {!plaidInfo.noAccount 
       
-      <Box className="border-b">
-        <Tabs 
-          value={activeTab} 
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-          TabIndicatorProps={{
-            style: {
-              backgroundColor: '#2E7D32',
-            }
-          }}
-          sx={{
-            '& .MuiTab-root.Mui-selected': {
-              color: '#2E7D32'
-            }
-          }}
-        >
-          {tabs.map((tab) => (
-            <Tab 
-              key={tab.value}
-              label={tab.label} 
-              value={tab.value}
-              sx={tabSx}
-            />
-          ))}
-        </Tabs>
-      </Box>
-      
-      {tabComponents[activeTab]}
+        ?
+          <>
+            <Box className="border-b">
+              <Tabs 
+                value={activeTab} 
+                onChange={handleTabChange}
+                variant="scrollable"
+                scrollButtons="auto"
+                TabIndicatorProps={{
+                  style: {
+                    backgroundColor: '#2E7D32',
+                  }
+                }}
+                sx={{
+                  '& .MuiTab-root.Mui-selected': {
+                    color: '#2E7D32'
+                  }
+                }}
+                >
+                {tabs.map((tab) => (
+                  <Tab 
+                  key={tab.value}
+                  label={tab.label} 
+                  value={tab.value}
+                  sx={tabSx}
+                  />
+                ))}
+              </Tabs>
+            </Box>
+            
+            {tabComponents[activeTab]}
+          </>
+        :
+        <Box p={5}>
+          <Typography textAlign={'center'} fontWeight={'600'} variant='h6'>You have connected any account through Plaid.</Typography>
+        </Box>
+      }
     </Paper>
   );
 };

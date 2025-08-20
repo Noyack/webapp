@@ -8,7 +8,7 @@ export interface IncomeSourceDB {
   type: 'salary' | 'self_employment' | 'pension' | 'social_security' | 'investments' | 'rental' | 'other';
   name: string;
   amount: number;
-  frequency: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'annual' | 'irregular';
+  frequency: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'annual';
   description?: string;
   taxStatus?: 'fully_taxable' | 'partially_taxable' | 'tax_free';
   growthRate?: number;
@@ -53,7 +53,6 @@ export const mapToBackendModel = (source: IncomeSourceFrontend, userId: string):
     if (frontendFreq === "Monthly" || frontendFreq === "Bi-monthly") return 'monthly';
     if (frontendFreq === "Quarterly") return 'quarterly';
     if (frontendFreq === "Annually" || frontendFreq === "Semi-annually") return 'annual';
-    return 'irregular';
   };
 
   // Map tax status from frontend to backend enum
@@ -97,7 +96,6 @@ export const mapToFrontendModel = (dbSource: IncomeSourceDB): IncomeSourceFronte
     if (backendFreq === 'monthly') return "Monthly";
     if (backendFreq === 'quarterly') return "Quarterly";
     if (backendFreq === 'annual') return "Annually";
-    return "Irregular";
   };
 
   // Map tax status from backend to frontend
@@ -128,8 +126,6 @@ export const incomeService = {
   async getUserIncomeSources(userId: string): Promise<IncomeSourceFrontend[]> {
     try {
       const response = await apiClient.get(`/v1/users/${userId}/income-sources`);
-      console.log(response);
-      // Use type assertion if needed
       const incomeSources = response?.data as IncomeSourceDB[];
       return incomeSources.map((source: IncomeSourceDB) => mapToFrontendModel(source));
     } catch (error) {

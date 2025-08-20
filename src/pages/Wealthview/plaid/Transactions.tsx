@@ -3,12 +3,14 @@ import { UserContext } from '../../../context/UserContext';
 import wealthViewService from '../../../services/wealthView.service';
 import { TransactionItem } from '../../../types';
 import { Box, CircularProgress, Typography, Button, TableContainer, Paper, Table, TableHead, TableRow, TableCell, TableBody, Chip } from '@mui/material';
+import { PlaidContext } from '../../../context/PlaidContext';
 
 
   
 
 function Transactions() {
     const { userInfo } = useContext(UserContext);
+    const { plaidInfo } = useContext(PlaidContext);
       const [transactions, setTransactions] = useState<TransactionItem[]>([]);
       const [loading, setLoading] = useState<boolean>(true);
       const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ function Transactions() {
           }
         };
     
-        if (userInfo?.id) {
+        if (userInfo?.id && !plaidInfo?.noAccount) {
           fetchFinancialData();
         }
       }, [userInfo]);

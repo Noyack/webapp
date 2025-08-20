@@ -31,7 +31,7 @@ export interface PrimaryIncome {
   
   // Constants for dropdown options
   export const employmentStatusOptions = ["Employed", "Self-employed", "Unemployed", "Retired", "Student"];
-  export const frequencyOptions = ["Weekly", "Bi-weekly", "Bi-monthly", "Monthly", "Quarterly", "Semi-annually", "Annually", "Irregular"];
+  export const frequencyOptions = ["Weekly", "Bi-weekly", "Bi-monthly", "Monthly", "Quarterly", "Semi-annually", "Annually"];
   export const stabilityOptions = ["Fixed salary", "Hourly with stable hours", "Hourly with variable hours", "Commission-based", "Base + Commission", "Contract work", "Variable/Seasonal"];
   export const futureChangeOptions = ["No anticipated changes", "Expected promotion", "Expected career change", "Potential layoff risk", "Planning to reduce hours", "Planning to retire", "Sabbatical/Break planned"];
   export const incomeTypeOptions = [
@@ -89,7 +89,6 @@ export interface PrimaryIncome {
       case "Quarterly": return numAmount * 4;
       case "Semi-annually": return numAmount * 2;
       case "Annually": return numAmount;
-      case "Irregular": return numAmount;
       default: return numAmount;
     }
   };

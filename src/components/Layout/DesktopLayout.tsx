@@ -1,10 +1,10 @@
 // components/Layout/DesktopLayout.tsx
 import Navbar from './Navbar';
 import { DesktopLayoutProps } from '../../types';
-// import GlobalSearchInput from '../Search/GlobalSearchInput';
+import GlobalSearchInput from '../Search/GlobalSearchInput';
 import UserProfileButton from '../UI/UserProfileButton';
 import { useLocation } from 'react-router-dom';
-import { useContext, useEffect } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { ViewContext } from '../../context/ViewContext';
 import { Box, Typography } from '@mui/material';
 
@@ -14,10 +14,10 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
   const {setView} = useContext(ViewContext)
   const learn = ["community", "planning", "bookmark", "wealthview"]
   const invest = ["invest", "account", "funding", "wallet"]
+  const [noAi, setNoAi] = useState(false)
   const path = location.pathname.split('/')[1]
 
   useEffect(()=>{
-
     if(learn.includes(path)){
       setView({view:'Learn'})
     }
@@ -25,7 +25,8 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
       setView({view:'Invest'})
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[location.pathname])
+  },[location.pathname, noAi])
+
   return (
       <div className="min-h-screen grid grid-cols-[226px_1fr] bg-gray-100 ">
         <Box bgcolor={"#1C398E"} position={"absolute"} top={0} left={0} width={"100dvw"}
@@ -41,9 +42,9 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
         {/* Main Content - Flexible middle column */}
         <main className="mainCont overflow-y-auto h-screen py-6 px-5 relative">
           <div className="max-w-7xl mx-auto flex flex-col gap-10">
-          <div className="search-input-container">
-            {/* <GlobalSearchInput /> */}
-          </div>
+          {path !== 'quiz' && <div className="search-input-container flex justify-center">
+            <GlobalSearchInput />
+          </div>}
             {children}
             <div className="flex  content-center gap-2 items-center  fixed top-2 right-0 z-2">
                   {/* <div className='flex justify-center items-center bg-white w-[40px] h-[40px] rounded-full shadow-xl'>

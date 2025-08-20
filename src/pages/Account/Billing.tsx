@@ -114,18 +114,15 @@ const Billing = () => {
 
   const handleStartInvestment = () => {
     // Redirect to Stripe checkout for investment
-    console.log('Redirecting to investment Stripe checkout');
     // window.location.href = 'your-stripe-checkout-url-for-investment';
   };
 
   const handleStartCommunitySubscription = () => {
     // Redirect to Stripe checkout for subscription
-    console.log('Redirecting to Community subscription Stripe checkout');
     // window.location.href = 'your-stripe-checkout-url-for-subscription';
   };
 
   const handleCancelSubscription = () => {
-    console.log('Cancelling Community subscription');
     // Implement subscription cancellation
   };
 

@@ -84,14 +84,6 @@ export const calculateProjections = (allocation: AssetAllocation, amount: number
     (altAlloc / 100 * ALT_RETURN)
   );
   
-  // Log the exact calculation data for debugging
-  console.log('Growth calculation:', {
-    stockAlloc, bondAlloc, cashAlloc, altAlloc,
-    expectedAnnualReturn: expectedAnnualReturn.toFixed(4),
-    compoundFactor: Math.pow(1 + expectedAnnualReturn, 5).toFixed(4),
-    startAmount: amount
-  });
-  
   // Use exact math with a fresh base amount
   const currentValue = Math.round(amount);
   

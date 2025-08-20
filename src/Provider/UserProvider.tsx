@@ -1,4 +1,3 @@
-// UserProvider.tsx
 import { PropsWithChildren, useState } from 'react';
 import { Subscriptions, UserInfo } from '../types';
 import { UserContext } from '../context/UserContext';

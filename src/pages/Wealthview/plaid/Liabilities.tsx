@@ -19,12 +19,14 @@ import {
   TableCell, 
   TableBody 
 } from '@mui/material';
+import { PlaidContext } from '../../../context/PlaidContext';
 
 // Constants
 const GREEN_COLOR = '#2E7D32';
 
 const LiabilitiesDisplay: React.FC = () => {
   const { userInfo } = useContext(UserContext);
+  const { plaidInfo } = useContext(PlaidContext);
   const [accounts, setAccounts] = useState<PlaidAccount[]>([]);
   const [liabilities, setLiabilities] = useState<LiabilitiesData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -48,7 +50,7 @@ const LiabilitiesDisplay: React.FC = () => {
       }
     };
 
-    if (userInfo?.id) {
+    if (userInfo?.id && !plaidInfo?.noAccount) {
       fetchLiabilities();
     }
   }, [userInfo]);

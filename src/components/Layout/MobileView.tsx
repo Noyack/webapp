@@ -1,6 +1,6 @@
 // components/Layout/DesktopLayout.tsx
 import { DesktopLayoutProps } from '../../types';
-// import GlobalSearchInput from '../Search/GlobalSearchInput';
+import GlobalSearchInput from '../Search/GlobalSearchInput';
 import UserProfileButton from '../UI/UserProfileButton';
 import { useLocation } from 'react-router-dom';
 import { useContext, useEffect } from 'react';
@@ -58,7 +58,7 @@ export default function MobileView({ children }: DesktopLayoutProps) {
         <main className="px-5 ">
           <div className="max-w-7xl mx-auto flex flex-col gap-10 pb-4">
             <div className="search-input-container">
-              {/* <GlobalSearchInput /> */}
+              <GlobalSearchInput />
             </div>
             {children}
           </div>

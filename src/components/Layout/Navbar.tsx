@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
-import Logo from '../../assets/NOYACK Logo transparent background .png'
+import Logo from '../../assets/Logo.svg'
 import { FaMoneyBillTransfer } from "react-icons/fa6";
 import { BiSolidCalendarEvent, BiSolidDashboard } from "react-icons/bi";
 import { HiAcademicCap, HiChartPie } from "react-icons/hi2";

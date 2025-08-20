@@ -198,10 +198,9 @@ const Ebook = () => {
                             {details.description}
                           </p>
                           
-                          <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
-                            <span>Size: {formatFileSize(ebook.size)}</span>
+                          <div className="flex items-center justify-end text-xs text-gray-500 mb-4">
                             <span className={`px-2 py-1 rounded-full ${ebook.isReadable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                              {ebook.isReadable ? 'Readable' : 'View Only'}
+                              {ebook.isReadable ? 'Recently added' : 'View Only'}
                             </span>
                           </div>
                           

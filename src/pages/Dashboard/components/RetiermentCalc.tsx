@@ -67,7 +67,7 @@ const RetiermentCalc = () => {
     <BoxCard height={20} width={100}>
     <div>
       <div className="flex justify-center items-center gap-3 mb-2 p-5">
-        <Savings className="text-green-600" />
+        <Savings className="text-blue-900" />
         <h2 className="text-xl font-bold ">NOYACK Retirement Calculator</h2>
       </div>
     
@@ -126,7 +126,7 @@ const RetiermentCalc = () => {
           <div className="grid grid-cols-2 gap-4">
             {[12, 22].map((months) => (
               <div key={months} className="p-4 border rounded-lg">
-                <div className="text-lg font-bold text-[#2E7D32]">
+                <div className="text-lg font-bold text-blue-900">
                   ${((initialInvestment + monthlyInvestment * months)).toLocaleString()}
                 </div>
                 <div className="text-sm text-gray-500">{months} months</div>
@@ -136,7 +136,7 @@ const RetiermentCalc = () => {
 
           <button
             onClick={calculateRetirement}
-            className="w-full bg-[#2E7D32] text-white py-3 rounded-lg hover:bg-[#304d2c] cursor-pointer
+            className="w-full bg-blue-800 text-white py-3 rounded-lg hover:bg-blue-900 cursor-pointer
                      flex items-center justify-center gap-2"
           >
             <Calculate />
@@ -185,9 +185,9 @@ const RetiermentCalc = () => {
                     <Line 
                         type="monotone" 
                         dataKey="value" 
-                        stroke="#16a34a" 
+                        stroke="#1C398E" 
                         strokeWidth={2}
-                        dot={{ fill: '#16a34a', strokeWidth: 2 }}
+                        dot={{ fill: '#1C398E', strokeWidth: 2 }}
                     />
                 </LineChart>
             </ResponsiveContainer>

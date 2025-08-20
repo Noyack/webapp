@@ -28,7 +28,6 @@ const Account = () => {
     phone: user?.phoneNumbers[0]?.phoneNumber || '',
   });
 
-  console.log(location)
   useLayoutEffect(()=>{
     if(location.search){
         if(location.search === "?profile"){

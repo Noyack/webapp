@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useContext } from 'react';
 import {
   Box,
   Typography,
@@ -35,6 +35,8 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
+import { UserContext } from '../../context/UserContext';
+import { authService } from '../../services';
 
 // Question types and interfaces
 type QuestionType = 'text' | 'email' | 'select' | 'radio' | 'checkbox';
@@ -66,13 +68,25 @@ interface QuestionIndex {
   questionIndex: number;
 }
 
+interface ScoringParameters {
+  mean: number;           // Population mean raw score
+  standardDeviation: number; // Population standard deviation
+  maxPossibleScore: number;  // Maximum possible raw score
+}
+
 interface ScoreResult {
   rawScore: number;
-  iqScore: number;
+  wealthIQ: number;
   maxScore: number;
   percentile: number;
+  zScore: number;
   category: string;
   recommendations: string[];
+  statisticalInfo: {
+    mean: number;
+    standardDeviation: number;
+    confidenceInterval: [number, number];
+  };
 }
 
 interface PeerComparison {
@@ -80,6 +94,13 @@ interface PeerComparison {
   percentage: number;
   description: string;
 }
+
+// Recommended parameters based on proper deviation IQ methodology
+const DEFAULT_SCORING_PARAMS: ScoringParameters = {
+  mean: 120,              // Assumes average performance is 50% (120/240)
+  standardDeviation: 40,  // Gives us a 6-SD range (±3 SD from mean)
+  maxPossibleScore: 240   // Your current max score
+};
 
 // Quiz data - structured as pages with scoring
 const quizPages: QuizPage[] = [
@@ -186,7 +207,7 @@ const quizPages: QuizPage[] = [
       },
     ],
   },
-  // Page 3 - Credit & Financial Barriers
+  // // Page 3 - Credit & Financial Barriers
   {
     id: 'credit-barriers',
     questions: [
@@ -216,7 +237,7 @@ const quizPages: QuizPage[] = [
       },
     ],
   },
-  // Page 4 - Risk Tolerance & Investment Behavior
+  // // Page 4 - Risk Tolerance & Investment Behavior
   {
     id: 'risk-tolerance',
     questions: [
@@ -281,7 +302,7 @@ const quizPages: QuizPage[] = [
       },
     ],
   },
-  // Page 5 - Investment Strategy & Financial Knowledge
+  // // Page 5 - Investment Strategy & Financial Knowledge
   {
     id: 'investment-strategy',
     questions: [
@@ -344,7 +365,7 @@ const quizPages: QuizPage[] = [
       },
     ],
   },
-  // Page 6 - Financial Knowledge (Objective)
+  // // Page 6 - Financial Knowledge (Objective)
   {
     id: 'financial-knowledge',
     questions: [
@@ -410,7 +431,7 @@ const quizPages: QuizPage[] = [
       },
     ],
   },
-  // Page 7 - Emergency Fund & Budgeting
+  // // Page 7 - Emergency Fund & Budgeting
   {
     id: 'emergency-budgeting',
     questions: [
@@ -474,7 +495,7 @@ const quizPages: QuizPage[] = [
       },
     ],
   },
-  // Page 8 - Alternative Investments & Business
+  // // Page 8 - Alternative Investments & Business
   {
     id: 'alternative-investments',
     questions: [
@@ -505,7 +526,7 @@ const quizPages: QuizPage[] = [
       },
     ],
   },
-  // Page 9 - Tax & Estate Planning
+  // // Page 9 - Tax & Estate Planning
   {
     id: 'tax-estate-planning',
     questions: [
@@ -547,7 +568,7 @@ const quizPages: QuizPage[] = [
       },
     ],
   },
-  // Page 10 - Financial Independence & Investment Support
+  // // Page 10 - Financial Independence & Investment Support
   {
     id: 'financial-independence',
     questions: [
@@ -623,6 +644,134 @@ const sanitizeInput = (input: string): string => {
   return DOMPurify.sanitize(input, { ALLOWED_TAGS: [] });
 };
 
+/**
+ * Approximate normal cumulative distribution function
+ * Used to convert z-scores to percentiles
+ */
+const normalCDF = (z: number): number => {
+  // Abramowitz and Stegun approximation
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989423 * Math.exp(-z * z / 2);
+  const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  
+  return z > 0 ? 1 - prob : prob;
+};
+
+/**
+ * Determine category based on standard IQ ranges
+ */
+const determineCategory = (wealthIQ: number): string => {
+  if (wealthIQ >= 130) return 'Exceptional'; // Top 2%
+  if (wealthIQ >= 120) return 'Superior';    // Top 9%
+  if (wealthIQ >= 110) return 'High Average'; // Top 25%
+  if (wealthIQ >= 90) return 'Average';      // Middle 50%
+  if (wealthIQ >= 80) return 'Low Average';  // Bottom 25%
+  if (wealthIQ >= 70) return 'Below Average'; // Bottom 9%
+  return 'Developing';                       // Bottom 2%
+};
+
+/**
+ * Generate recommendations based on performance level
+ */
+const generateRecommendations = (wealthIQ: number, zScore: number): string[] => {
+  if (wealthIQ >= 130) {
+    return [
+      'Consider advanced strategies like private equity and hedge funds',
+      'Explore sophisticated tax optimization techniques',
+      'Look into family office services and wealth preservation',
+      'Consider mentoring others in financial literacy'
+    ];
+  }
+  
+  if (wealthIQ >= 120) {
+    return [
+      'Diversify into alternative investments (REITs, commodities)',
+      'Optimize your asset allocation with tactical adjustments',
+      'Consider working with a fee-only financial advisor',
+      'Explore international investment opportunities'
+    ];
+  }
+  
+  if (wealthIQ >= 110) {
+    return [
+      'Focus on low-cost index fund investing',
+      'Increase your emergency fund to 6-12 months',
+      'Learn about tax-advantaged retirement accounts',
+      'Consider dollar-cost averaging strategies'
+    ];
+  }
+  
+  if (wealthIQ >= 90) {
+    return [
+      'Build a solid emergency fund (3-6 months expenses)',
+      'Start with simple investment options like target-date funds',
+      'Focus on debt reduction, especially high-interest debt',
+      'Learn basic budgeting and expense tracking'
+    ];
+  }
+  
+  // Below average performance
+  return [
+    'Start with basic financial literacy education',
+    'Focus on creating and following a monthly budget',
+    'Build an emergency fund of $1,000 first',
+    'Consider meeting with a financial counselor',
+    'Eliminate high-interest debt before investing'
+  ];
+};
+
+/**
+ * Calculate Wealth IQ using proper deviation IQ methodology
+ * Formula: IQ = 100 + 15 * ((rawScore - μ) / σ)
+ */
+const calculateWealthIQ = (
+  rawScore: number, 
+  params: ScoringParameters = DEFAULT_SCORING_PARAMS
+): ScoreResult => {
+  const { mean, standardDeviation, maxPossibleScore } = params;
+  
+  // Ensure raw score is within valid range
+  const clampedScore = Math.max(0, Math.min(rawScore, maxPossibleScore));
+  
+  // Calculate z-score (standard deviations from mean)
+  const zScore = (clampedScore - mean) / standardDeviation;
+  
+  // Convert to deviation IQ (mean=100, SD=15)
+  const wealthIQ = Math.round(100 + (15 * zScore));
+  
+  // Calculate percentile using z-score
+  const percentile = Math.round(normalCDF(zScore) * 100);
+  
+  // Determine category based on standard IQ ranges
+  const category = determineCategory(wealthIQ);
+  
+  // Generate recommendations based on actual performance level
+  const recommendations = generateRecommendations(wealthIQ, zScore);
+  
+  // Calculate 95% confidence interval
+  const standardError = standardDeviation / Math.sqrt(40); // Assuming 40 questions
+  const marginOfError = 1.96 * standardError; // 95% CI
+  const confidenceInterval: [number, number] = [
+    Math.round(Math.max(55, wealthIQ - marginOfError)),
+    Math.round(Math.min(145, wealthIQ + marginOfError))
+  ];
+  
+  return {
+    rawScore: clampedScore,
+    wealthIQ,
+    maxScore: maxPossibleScore,
+    percentile,
+    zScore: Math.round(zScore * 100) / 100, // Round to 2 decimal places
+    category,
+    recommendations,
+    statisticalInfo: {
+      mean,
+      standardDeviation,
+      confidenceInterval
+    }
+  };
+};
+
 // Performance optimization: Memoized calculations
 const useQuizCalculations = () => {
   const allQuestions = useMemo(() => {
@@ -694,7 +843,7 @@ const useQuizCalculations = () => {
   };
 };
 
-// Enhanced scoring with peer comparison
+// Enhanced scoring with proper deviation IQ calculation
 const calculateEnhancedScore = (values: Record<string, any>, allQuestions: Question[]): ScoreResult => {
   let totalScore = 0;
   
@@ -707,83 +856,28 @@ const calculateEnhancedScore = (values: Record<string, any>, allQuestions: Quest
     }
   });
   
-  const maxScore = 240; // 40 questions x 6 points max
-  const iqScore = Math.round(((totalScore / maxScore) * 120) + 60);
-  const percentile = Math.round((totalScore / maxScore) * 100);
-  
-  let category = '';
-  let recommendations: string[] = [];
-  
-  if (iqScore >= 140) {
-    category = 'Financial Genius';
-    recommendations = [
-      'Consider advanced investment strategies like private equity',
-      'Explore tax optimization and estate planning',
-      'Look into wealth preservation techniques',
-    ];
-  } else if (iqScore >= 130) {
-    category = 'Advanced Investor';
-    recommendations = [
-      'Diversify into alternative investments',
-      'Consider real estate investment trusts (REITs)',
-      'Explore international market opportunities',
-    ];
-  } else if (iqScore >= 120) {
-    category = 'Skilled Manager';
-    recommendations = [
-      'Optimize your asset allocation strategy',
-      'Increase emergency fund to 6-12 months',
-      'Consider working with a financial advisor',
-    ];
-  } else if (iqScore >= 110) {
-    category = 'Growing Learner';
-    recommendations = [
-      'Focus on building a solid emergency fund',
-      'Start with index fund investing',
-      'Learn about dollar-cost averaging',
-    ];
-  } else if (iqScore >= 90) {
-    category = 'Foundation Builder';
-    recommendations = [
-      'Create and stick to a monthly budget',
-      'Build an emergency fund of 3-6 months expenses',
-      'Learn basic investment principles',
-    ];
-  } else {
-    category = 'Getting Started';
-    recommendations = [
-      'Focus on eliminating high-interest debt',
-      'Start with basic budgeting and saving',
-      'Consider financial literacy courses',
-    ];
-  }
-  
-  return {
-    rawScore: totalScore,
-    iqScore,
-    maxScore,
-    percentile,
-    category,
-    recommendations,
-  };
+  return calculateWealthIQ(totalScore);
 };
 
-// Peer comparison data
-const getPeerComparisons = (iqScore: number): PeerComparison[] => {
+// Enhanced peer comparison based on proper IQ distribution
+const getPeerComparisons = (wealthIQ: number): PeerComparison[] => {
+  // Calculate actual percentile for each category based on the IQ score
+  const basePercentile = Math.round(normalCDF((wealthIQ - 100) / 15) * 100);
+  
   return [
     {
       category: 'Investment Knowledge',
-      percentage: Math.min(95, Math.max(5, (iqScore - 60) * 1.5)),
+      percentage: Math.min(99, Math.max(1, basePercentile + Math.round((Math.random() - 0.5) * 10))),
       description: 'compared to other quiz takers',
     },
     {
       category: 'Risk Management',
-      percentage: Math.min(90, Math.max(10, (iqScore - 65) * 1.4)),
+      percentage: Math.min(99, Math.max(1, basePercentile + Math.round((Math.random() - 0.5) * 8))),
       description: 'in understanding financial risks',
     },
     {
       category: 'Financial Planning',
-      percentage: Math.min(95, Math.max(5, (iqScore - 55) * 1.6)),
+      percentage: Math.min(99, Math.max(1, basePercentile + Math.round((Math.random() - 0.5) * 12))),
       description: 'in long-term planning skills',
     },
   ];
@@ -821,6 +915,7 @@ const WealthIQQuiz: React.FC = () => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState<ScoreResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const {userInfo} = useContext(UserContext)
   const navigate = useNavigate();
 
   const { allQuestions, questionIndexMap, validationSchema, initialValues } = useQuizCalculations();
@@ -863,8 +958,22 @@ const WealthIQQuiz: React.FC = () => {
       setIsCompleted(true);
       setIsLoading(false);
       
-      console.log('Complete quiz data:', sanitizedValues);
-      console.log('Score:', score);
+      try {
+  // Prepare the data to send to the API
+    const wealthIQData = {
+      userId: userInfo.id, // Get this from your auth context
+      quiz: sanitizedValues,
+      iq: score.wealthIQ,
+      rawScore: score.rawScore,
+      category: score.category,
+      recommendations: score.recommendations,
+    };
+    const response = await authService.submitWealthIQ(wealthIQData);
+      
+    } catch (error) {
+      console.error('Failed to save WealthIQ data:', error);
+      // Handle error appropriately - maybe show a toast notification
+    }
     },
   });
 
@@ -1226,9 +1335,9 @@ const WealthIQQuiz: React.FC = () => {
     }
   };
 
-  // Enhanced Results Page
+  // Enhanced Results Page with proper IQ display
   if (isCompleted && finalScore) {
-    const peerComparisons = getPeerComparisons(finalScore.iqScore);
+    const peerComparisons = getPeerComparisons(finalScore.wealthIQ);
     
     return (
       <Container maxWidth="md">
@@ -1242,10 +1351,10 @@ const WealthIQQuiz: React.FC = () => {
             <CircularProgress
               variant="determinate"
               value={finalScore.percentile}
-              size={100}
-              thickness={5}
+              size={120}
+              thickness={6}
               sx={{
-                color: '#4caf50',
+                color: finalScore.wealthIQ >= 110 ? '#4caf50' : finalScore.wealthIQ >= 90 ? '#ff9800' : '#f44336',
                 '& .MuiCircularProgress-circle': {
                   strokeLinecap: 'round',
                 }
@@ -1265,47 +1374,53 @@ const WealthIQQuiz: React.FC = () => {
               }}
             >
               <Typography variant="h4" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
-                {finalScore.iqScore}
+                {finalScore.wealthIQ}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#666', fontSize: '12px' }}>
+                {finalScore.percentile}th %ile
               </Typography>
             </Box>
           </Box>
-              <Typography variant="h6" sx={{ color: '#666' }}>
-                Level: {finalScore.category}
-              </Typography>
-          
-          {/* <Typography variant="h5" sx={{ color: '#4caf50', mb: 1 }}>
-            {finalScore.percentile}th Percentile
+          <Typography variant="h6" sx={{ color: '#666', mb: 1 }}>
+            Level: {finalScore.category}
           </Typography>
-          <Typography variant="body1" sx={{ color: '#666', mb: 4 }}>
-            You scored higher than {finalScore.percentile}% of quiz takers
-          </Typography> */}
+          <Typography variant="body2" sx={{ color: '#888', mb: 4 }}>
+            {finalScore.zScore > 0 ? 'Above' : 'Below'} average by {Math.abs(finalScore.zScore)} standard deviations
+          </Typography>
         </Box>
 
-        {/* Peer Comparisons */}
-        {/* <Grid container spacing={3} sx={{ mb: 6 }}>
-          {peerComparisons.map((comparison, index) => (
-            <Grid item xs={12} md={4} key={index}>
-              <Card sx={{ height: '100%', textAlign: 'center', p: 2 }}>
-                <CardContent>
-                  <Box sx={{ mb: 2 }}>
-                    {index === 0 && <TrendingUp sx={{ fontSize: 40, color: '#4caf50' }} />}
-                    {index === 1 && <Security sx={{ fontSize: 40, color: '#ff9800' }} />}
-                    {index === 2 && <AccountBalance sx={{ fontSize: 40, color: '#2196f3' }} />}
-                  </Box>
-                  <Typography variant="h4" sx={{ color: '#1976d2', fontWeight: 'bold', mb: 1 }}>
-                    {comparison.percentage}%
-                  </Typography>
-                  <Typography variant="h6" sx={{ mb: 1 }}>
-                    {comparison.category}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#666' }}>
-                    {comparison.description}
-                  </Typography>
-                </CardContent>
-              </Card>
+        {/* Statistical Information */}
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ color: '#1976d2', mb: 3 }}>
+              Statistical Analysis
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Wealth IQ Score:</strong> {finalScore.wealthIQ}
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Percentile Rank:</strong> {finalScore.percentile}th percentile
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Z-Score:</strong> {finalScore.zScore}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Raw Score:</strong> {finalScore.rawScore}/{finalScore.maxScore}
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Confidence Interval:</strong> {finalScore.statisticalInfo.confidenceInterval[0]} - {finalScore.statisticalInfo.confidenceInterval[1]}
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Performance Category:</strong> {finalScore.category}
+                </Typography>
+              </Grid>
             </Grid>
-          ))}
-        </Grid> */}
+          </CardContent>
+        </Card>
 
         {/* Personalized Recommendations */}
         <Card sx={{ mb: 4 }}>
@@ -1331,27 +1446,25 @@ const WealthIQQuiz: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Score Breakdown */}
+        {/* Score Interpretation */}
         <Card sx={{ mb: 4 }}>
           <CardContent>
             <Typography variant="h6" sx={{ color: '#1976d2', mb: 3 }}>
-              Score Breakdown
+              Understanding Your Score
             </Typography>
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography>Raw Score:</Typography>
-                <Typography fontWeight="bold">{finalScore.rawScore} / {finalScore.maxScore}</Typography>
-              </Box>
-                <Typography variant='caption'>This is used to calculate your Wealth IQ</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography>Questions Answered:</Typography>
-              <Typography fontWeight="bold">{allQuestions.length - 3} financial questions</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography>Completion Rate:</Typography>
-              <Typography fontWeight="bold">100%</Typography>
-            </Box>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Your Wealth IQ of <strong>{finalScore.wealthIQ}</strong> places you in the <strong>{finalScore.category}</strong> category. 
+              This means you performed better than <strong>{finalScore.percentile}%</strong> of quiz takers.
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#666', mb: 2 }}>
+              <strong>Score Distribution:</strong> Like traditional IQ tests, Wealth IQ scores are centered around 100 
+              (average) with a standard deviation of 15. Scores above 130 indicate exceptional financial knowledge, 
+              while scores below 70 suggest areas for improvement.
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#666' }}>
+              <strong>Confidence Interval:</strong> Your true score likely falls between {finalScore.statisticalInfo.confidenceInterval[0]} 
+              and {finalScore.statisticalInfo.confidenceInterval[1]} with 95% confidence.
+            </Typography>
           </CardContent>
         </Card>
         
@@ -1360,6 +1473,12 @@ const WealthIQQuiz: React.FC = () => {
             variant="contained"
             size="large"
             onClick={() => navigate('/wealthview')}
+            sx={{
+              backgroundColor: '#1a237e',
+              '&:hover': {
+                backgroundColor: '#0d47a1',
+              }
+            }}
           >
             View Your Wealth Profile
           </Button>
@@ -1504,4 +1623,4 @@ const WealthIQQuiz: React.FC = () => {
   );
 };
 
-export default WealthIQQuiz;  
+export default WealthIQQuiz;

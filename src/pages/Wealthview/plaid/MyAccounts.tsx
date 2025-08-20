@@ -11,19 +11,21 @@ import {
 } from '@mui/material';
 import FetchError from '../../../components/UI/FetchError';
 import FetchEmpty from '../../../components/UI/FetchEmpty';
+import { PlaidContext } from '../../../context/PlaidContext';
 
 // Updated type to handle array of PlaidAccountsData
 type AccountsResponse = PlaidAccountsData[];
 
 const MyAccounts = () => {
   const { userInfo } = useContext(UserContext);
+  const { plaidInfo } = useContext(PlaidContext);
   const [accountsData, setAccountsData] = useState<AccountsResponse>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
+  console.log(accountsData)
   useEffect(() => {
         const currentUserId = userInfo?.id;
-        if (currentUserId) {
+        if (currentUserId && !plaidInfo?.noAccount) {
           fetchFinancialData();
         }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,7 +83,7 @@ const MyAccounts = () => {
       {accountsData.map((institution, institutionIndex) => (
         <Box key={institution.item.item_id} className="mb-8">
           <Box className="mb-4">
-            <Typography variant="h6" className="text-gray-700">
+            <Typography variant="h5" fontWeight={'bold'} className="text-gray-700">
               {institution.item.institution_name || 'Your Financial Institution'}
             </Typography>
           </Box>

@@ -283,7 +283,7 @@ function IncomeInfo() {
       setError("Income type and amount are required");
       return;
     }
-    if (newIncomeSource.amount >= 0) {
+    if (newIncomeSource.amount <= 0) {
       setError("Income amount is not valid");
       return;
     }

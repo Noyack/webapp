@@ -627,7 +627,6 @@ const Invest: React.FC = () => {
               startIcon={<TrendingUp />}
               onClick={() => {
                 // Navigate to investments dashboard
-                console.log('Navigate to investments');
               }}
             >
               Review More Investments

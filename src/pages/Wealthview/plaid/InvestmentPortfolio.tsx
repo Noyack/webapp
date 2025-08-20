@@ -3,11 +3,13 @@ import { UserContext } from '../../../context/UserContext';
 import { Holding, PlaidAccount, Security } from '../../../types';
 import wealthViewService from '../../../services/wealthView.service';
 import { Box, CircularProgress, Typography, Paper, TableContainer, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
+import { PlaidContext } from '../../../context/PlaidContext';
 
 
 
 const InvestmentPortfolio: React.FC = () => {
   const {userInfo} = useContext(UserContext)
+  const {plaidInfo} = useContext(PlaidContext)
   const [accounts, setAccounts] = useState<PlaidAccount[]>([]);
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [securities, setSecurities] = useState<Record<string, Security>>({});
@@ -39,7 +41,7 @@ const InvestmentPortfolio: React.FC = () => {
       }
     };
 
-    if (userInfo?.id) {
+    if (userInfo?.id && !plaidInfo?.noAccount) {
       fetchInvestmentData();
     }
   }, [userInfo?.id]);

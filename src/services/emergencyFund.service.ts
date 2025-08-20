@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import apiClient from './api-client';
 import { EmergencyFundsForm, EmergencySavingsAccount } from '../types';
 
@@ -72,7 +70,7 @@ const mapToBackendModel = (formData: EmergencyFundsForm, userId: string): Emerge
     familySupportDetails: formData.familySupportDetails,
     otherLiquidAssets: formData.otherLiquidAssets.toString(),
     monthlyContribution: formData.monthlyContribution.toString(),
-    targetCompletionDate: formData.targetCompletionDate || null,
+    targetCompletionDate: formData.targetCompletionDate || undefined,
     jobSecurityLevel: formData.jobSecurityLevel,
     healthConsiderations: formData.healthConsiderations,
     majorUpcomingExpenses: formData.majorUpcomingExpenses,
@@ -142,7 +140,7 @@ const mapPartialToBackendModel = (
         break;
       case 'targetCompletionDate':
         if (newData.targetCompletionDate !== originalData.targetCompletionDate) {
-          update.targetCompletionDate = newData.targetCompletionDate || null;
+          update.targetCompletionDate = newData.targetCompletionDate || undefined;
         }
         break;
       case 'jobSecurityLevel':
@@ -268,7 +266,7 @@ export class EmergencyFundService {
     this.ensureValidToken();
     
     try {
-      // Get main emergency fund data (using the API endpoint from your controller)
+      // Get main emergency fund data (CORRECTED ROUTE)
       const response = await apiClient.get(`/v1/users/${userId}/emergency-fund`);
       const emergencyFundData = response.data as EmergencyFundDB;
       
@@ -276,7 +274,8 @@ export class EmergencyFundService {
       let savingsAccounts: EmergencySavingsAccount[] = [];
       if (emergencyFundData?.id) {
         try {
-          const accountsResponse = await apiClient.get(`/v1/emergency-funds/${emergencyFundData.id}/savings-accounts`);
+          // CORRECTED ROUTE: using emergency-fund instead of emergency-funds
+          const accountsResponse = await apiClient.get(`/v1/emergency-fund/${emergencyFundData.id}/savings-accounts`);
           const accountsData = accountsResponse.data as EmergencySavingsAccountDB[];
           savingsAccounts = accountsData.map(mapSavingsAccountToFrontend);
         } catch (error) {
@@ -326,7 +325,7 @@ export class EmergencyFundService {
     
     try {
       // Get the emergency fund ID first
-      const existingData = await apiClient.get(`/v1/users/${userId}/emergency-fund`);
+      const existingData:any = await apiClient.get(`/v1/users/${userId}/emergency-fund`);
       if (!existingData.data?.id) {
         throw new Error('Emergency fund not found');
       }
@@ -339,8 +338,8 @@ export class EmergencyFundService {
         return; // No changes to save
       }
 
-      // Update existing emergency fund with only changed fields
-      await apiClient.patch(`/v1/emergency-funds/${existingData.data.id}`, removeTimestampFields(partialUpdate));
+      // CORRECTED ROUTE: Update existing emergency fund with only changed fields
+      await apiClient.patch(`/v1/emergency-fund/${existingData.data.id}`, removeTimestampFields(partialUpdate));
     } catch (error) {
       console.error('Error updating emergency fund partial:', error);
       throw error;
@@ -359,26 +358,27 @@ export class EmergencyFundService {
       // Check if emergency fund already exists
       let emergencyFundId: string;
       try {
-        const existingData = await apiClient.get(`/v1/users/${userId}/emergency-fund`);
+        const existingData:any = await apiClient.get(`/v1/users/${userId}/emergency-fund`);
         if (existingData.data?.id) {
-          // Update existing emergency fund (using the patch endpoint from your controller)
-          await apiClient.patch(`/v1/emergency-funds/${existingData.data.id}`, removeTimestampFields(backendData));
+          // CORRECTED ROUTE: Update existing emergency fund
+          await apiClient.patch(`/v1/emergency-fund/${existingData.data.id}`, removeTimestampFields(backendData));
           emergencyFundId = existingData.data.id;
         } else {
           throw new Error('No existing fund found');
         }
       } catch {
-        // Create new emergency fund (using the create endpoint from your controller)
-        const createResponse = await apiClient.post(`/v1/users/${userId}/emergency-fund`, removeTimestampFields(backendData));
+        // Create new emergency fund
+        const createResponse:any = await apiClient.post(`/v1/users/${userId}/emergency-fund`, removeTimestampFields(backendData));
         emergencyFundId = createResponse.data?.id || createResponse.data?.fund_id;
       }
 
       // Handle savings accounts
-      if (emergencyFundId && formData.savingsAccounts.length > 0) {
+      if (emergencyFundId && formData.savingsAccounts.length >= 0) {
         // Get existing savings accounts
         let existingAccounts: EmergencySavingsAccountDB[] = [];
         try {
-          const accountsResponse = await apiClient.get(`/v1/emergency-funds/${emergencyFundId}/savings-accounts`);
+          // CORRECTED ROUTE: using emergency-fund instead of emergency-funds
+          const accountsResponse:any = await apiClient.get(`/v1/emergency-fund/${emergencyFundId}/savings-accounts`);
           existingAccounts = accountsResponse.data || [];
         } catch {
           // No existing accounts, continue with creation
@@ -393,18 +393,19 @@ export class EmergencyFundService {
           const backendAccount = mapSavingsAccountToBackend(account, emergencyFundId);
           
           if (account.id && !account.id.startsWith('temp-') && existingAccountsMap.has(account.id)) {
-            // Update existing account
-            await apiClient.patch(`/v1/emergency-savings-accounts/${account.id}`, removeTimestampFields(backendAccount));
+            // CORRECTED ROUTE: Update existing account
+            await apiClient.patch(`/v1/emergency-savings-account/${account.id}`, removeTimestampFields(backendAccount));
           } else {
-            // Create new account
-            await apiClient.post(`/v1/emergency-funds/${emergencyFundId}/savings-accounts`, removeTimestampFields(backendAccount));
+            // CORRECTED ROUTE: Create new account
+            await apiClient.post(`/v1/emergency-fund/${emergencyFundId}/savings-accounts`, removeTimestampFields(backendAccount));
           }
         }
 
         // Delete removed accounts
         for (const existingAccount of existingAccounts) {
           if (existingAccount.id && !formAccountsMap.has(existingAccount.id)) {
-            await apiClient.delete(`/v1/emergency-savings-accounts/${existingAccount.id}`);
+            // CORRECTED ROUTE: Delete account
+            await apiClient.delete(`/v1/emergency-savings-account/${existingAccount.id}`);
           }
         }
       }
@@ -419,9 +420,10 @@ export class EmergencyFundService {
     this.ensureValidToken();
     
     try {
-      const response = await apiClient.get(`/v1/users/${userId}/emergency-fund`);
+      const response:any = await apiClient.get(`/v1/users/${userId}/emergency-fund`);
       if (response.data?.id) {
-        await apiClient.delete(`/v1/emergency-funds/${response.data.id}`);
+        // CORRECTED ROUTE: Delete emergency fund
+        await apiClient.delete(`/v1/emergency-fund/${response.data.id}`);
       }
     } catch (error) {
       console.error('Error deleting emergency fund:', error);
@@ -434,7 +436,8 @@ export class EmergencyFundService {
     this.ensureValidToken();
     
     try {
-      const response = await apiClient.get(`/v1/emergency-funds/${fundId}/savings-accounts`);
+      // CORRECTED ROUTE: using emergency-fund instead of emergency-funds
+      const response = await apiClient.get(`/v1/emergency-fund/${fundId}/savings-accounts`);
       const accountsData = response.data as EmergencySavingsAccountDB[];
       return accountsData.map(mapSavingsAccountToFrontend);
     } catch (error) {
@@ -446,4 +449,4 @@ export class EmergencyFundService {
 
 // Create singleton instance following the pattern from other services
 export const emergencyFundService = new EmergencyFundService();
-export default emergencyFundService; 
+export default emergencyFundService;

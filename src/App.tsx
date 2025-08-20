@@ -8,6 +8,8 @@ import { ViewProvider } from "./Provider/ViewProvider";
 import MobileView from "./components/Layout/MobileView";
 import { useMediaQuery, useTheme } from "@mui/material";
 import ScrollToTop from "./components/ScrollToTop";
+import SearchProvider from "./components/Search/SearchContext";
+import GlobalSearchPopover from "./components/Search/GlobalSearchPopover";
 
 // Lazy load components
 const AppRoutes = lazy(() => import("./routes"));
@@ -111,12 +113,15 @@ const App: FC = () => {
                   
                   {(userInfo && isNew === false) && (
                     <ViewProvider>
+                      <SearchProvider>
                       <ResponsiveLayout isMobile={isMobile}>
                         <Suspense fallback={<LoadingSpinner />}>
                         <ScrollToTop />
                           <AppRoutes />
+                          <GlobalSearchPopover />
                         </Suspense>
                       </ResponsiveLayout>
+                        </SearchProvider>
                     </ViewProvider>
               )}
 	     </SignedIn>

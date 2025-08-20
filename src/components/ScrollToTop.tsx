@@ -27,7 +27,6 @@ export default function ScrollToTop() {
       let scrolled = false;
       scrollContainers.forEach((container) => {
         if (container && container.scrollTop > 0) {
-          console.log('Scrolling container:', container);
           container.scrollTo(0, 0);
           scrolled = true;
         }

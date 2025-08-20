@@ -175,12 +175,10 @@ function Overview() {
     
     const handleAddPaymentMethod = () => {
       // This would typically open a modal or navigate to a payment method form
-      console.log('Add payment method clicked');
     };
     
     const handleCashOut = async () => {
       // This would typically open a cash out form
-      console.log('Cash out clicked');
     };
     
     // Show loading state

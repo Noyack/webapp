@@ -82,9 +82,6 @@ const AssetAllocationForm: React.FC<AssetAllocationFormProps> = ({
 
   // Save changes
   const handleSaveChanges = () => {
-    console.log("Saving allocation settings");
-    console.log("Target allocation to save:", targetAllocationState);
-    
     if (!isReadOnly) {
       updateCurrentAllocation(currentAllocationState);
     }

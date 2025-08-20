@@ -7,6 +7,8 @@ import { BrowserRouter } from 'react-router-dom' // Fixed import from react-rout
 import { CssBaseline, StyledEngineProvider } from "@mui/material";
 import { UserProvider } from './Provider/UserProvider'
 import { ResponsiveProvider } from './context/ResponsiveContext'
+import SearchProvider from './components/Search/SearchContext'
+import { PlaidProvider } from './Provider/PlaidProvider'
 
 // Import your Publishable Key
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -33,9 +35,13 @@ root.render(
       <StyledEngineProvider injectFirst>
         <CssBaseline />
         <UserProvider>
-          <ResponsiveProvider>
-            <App />
-          </ResponsiveProvider>
+          <PlaidProvider>
+            <SearchProvider>
+              <ResponsiveProvider>
+                <App />
+              </ResponsiveProvider>
+            </SearchProvider>
+          </PlaidProvider>
         </UserProvider>
       </StyledEngineProvider>
     </BrowserRouter>

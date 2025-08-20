@@ -65,7 +65,6 @@ const EventsPage = () => {
         setFetching(true);
         hasLoadedRef.current = true;
         
-        console.log('Loading events from HubSpot...');
         const response = await hubspotService.getAllEvents();
         
         if (response && response.results) {
@@ -88,10 +87,8 @@ const EventsPage = () => {
             }
           }));
           
-          console.log('Events with display fields:', eventsWithDisplayFields);
           setEvents(eventsWithDisplayFields);
         } else {
-          console.log('No events found, using empty array');
           setEvents([]);
         }
       } catch (error) {
@@ -157,7 +154,6 @@ const EventsPage = () => {
         });
       }
 
-      console.log('Filtered events:', filtered.length, 'from', events.length, 'total events');
       setFilteredEvents(filtered);
     } catch (error) {
       console.error('Error filtering events:', error);

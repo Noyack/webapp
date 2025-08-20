@@ -143,7 +143,6 @@ const AdditionalIncomeForm: React.FC<AdditionalIncomeFormProps> = ({
                 label="Amount"
                 type="number"
                 name="amount"
-                value={newIncomeSource.amount}
                 onChange={onNewIncomeTextChange}
                 InputProps={{ 
                   inputProps: { min: 0 },

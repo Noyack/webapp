@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { UserContext } from '../../context/UserContext';
 import { useNavigate } from 'react-router';
+import { Typography } from '@mui/material';
 
 const UserProfileButton = () => {
   const { userInfo, subs } = useContext(UserContext);
@@ -59,11 +60,13 @@ const UserProfileButton = () => {
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-3 w-[200px] p-2 rounded-l-4xl bg-white shadow-2xl hover:shadow-xl transition-shadow duration-200 border border-gray-100"
+        className="cursor-pointer flex items-center  w-[200px] p-2 space-x-3 rounded-l-4xl bg-white shadow-2xl hover:shadow-xl  transition-shadow duration-200 border border-gray-100"
       >
         {/* User Avatar */}
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-          {userInfo?.firstName?.charAt(0) || userInfo?.email || 'U'}
+          <Typography>
+            {`${userInfo?.firstName?.charAt(0)}${userInfo?.lastName?.charAt(0)}`}
+          </Typography>
         </div>
         
         {/* User Info */}
@@ -71,20 +74,13 @@ const UserProfileButton = () => {
           <p className="font-medium text-gray-900 truncate">
             {(`${userInfo?.firstName} ${userInfo?.lastName}`) || 'User'}
           </p>
-          <p className="text-sm text-gray-500 truncate">Individual</p>
+          <p className="text-sm text-gray-500 truncate">{subs?.plan}</p>
         </div>
-        
-        {/* Chevron */}
-        <ChevronDown 
-          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-            isOpen ? 'rotate-180' : ''
-          }`}
-        />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-full bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+        <div className="absolute top-full right-3 mt-1 w-full bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
           {/* User Info Header */}
           <div className="px-4 py-3 border-b border-gray-100">
             <p className="font-medium text-gray-900">{`${userInfo?.firstName} ${userInfo?.lastName}`}</p>

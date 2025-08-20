@@ -4,6 +4,7 @@ import { UserContext } from '../../../context/UserContext';
 import { Box, Button, Typography } from '@mui/material';
 import wealthViewService from '../../../services/wealthView.service';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { PlaidContext } from '../../../context/PlaidContext';
 
 
 
@@ -14,72 +15,21 @@ const PlaidLogo = () =>{
   )
 }
 
-const PlaidLinkButton = () => {
+const PlaidLinkButton = ({plaidInfo}) => {
   const { hasPermission, getUpgradeInfo } = usePermissions();
-  const [linkToken, setLinkToken] = useState<string | null>(null);
-  const [list, setList] = useState<string[]>(['auth', 'transactions', 'identity', 'investments'])
-  const [userToken, setUserToken] = useState<string|null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { setPlaidInfo } = useContext(PlaidContext)
   const { userInfo } = useContext(UserContext);
   const canUsePlaid = hasPermission("plaid", "connect");
   const upgradeInfo = getUpgradeInfo("plaid", "connect");
 
-  // First get a user token (required for income verification)
-  useEffect(() => {
-    const fetchUserToken = async () => {
-      if(userInfo?.id)
-      try {
-        setIsLoading(true);
-        const response = await wealthViewService.FetchPlaidToken(userInfo?.id);
-        setUserToken(response?.user_token);
-      } catch (err) {
-        console.error('Error fetching user token:', err);
-        setError('Failed to initialize bank connection. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (userInfo?.id){
-      if(!userInfo?.plaidUserToken){
-        fetchUserToken();
-      }else{
-        setUserToken(userInfo?.plaidUserToken)
-      }
-    } 
-  }, [userInfo]);
-
-  // Then get a link token once we have the user token
-  useEffect(() => {
-    const fetchLinkToken = async () => {
-      if(userInfo?.id && userToken)
-      try {
-        setIsLoading(true);
-        const response = await wealthViewService.FetchPlaidLink(userInfo?.id, userToken, list);
-        setLinkToken(response?.link_token);
-      } catch (err) {
-        console.error('Error fetching link token:', err);
-        setError('Failed to initialize bank connection. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Only fetch the link token once we have the user token
-    if (userInfo?.id && userToken) {
-      fetchLinkToken();
-    }
-  }, [userInfo, userToken]);
-
   const onSuccess = useCallback(async (public_token:string) => {
     try {
-      setIsLoading(true);
+      setPlaidInfo(prev =>({...prev, loading:true, error:''}));
       // Exchange the public token for an access token
       const response = await wealthViewService.exchangeToken({
         publicToken: public_token, 
         userId: userInfo?.id,
-        userToken: userToken, // Include user token here too
+        userToken: userInfo?.plaidUserToken, // Include user token here too
         // store institution data as well:
         // institution: metadata.institution,
         // accounts: metadata.accounts
@@ -89,21 +39,22 @@ const PlaidLinkButton = () => {
       if (response === 200) {
         // Display success message or redirect
         // You might want to trigger a refresh of account data here
+        window.location.reload()
       }
     } catch (err) {
       console.error('Error exchanging token:', err);
-      setError('Failed to complete bank connection. Please try again.');
+      setPlaidInfo(prev=>({...prev, error:'Failed to complete bank connection. Please try again.'}));
     } finally {
-      setIsLoading(false);
+      setPlaidInfo(prev =>({...prev, loading:false}));
     }
-  }, [userInfo?.id, userToken]);
+  }, [userInfo?.id, userInfo?.plaidUserToken]);
 
   const { open, ready } = usePlaidLink({
-    token: linkToken,
+    token: plaidInfo?.linkToken,
     onSuccess,
     // Optional - configure more Plaid Link options
     onExit: (err) => {
-      if (err) setError(`Connection closed: ${err.display_message || 'Unknown error'}`);
+      if (err) setPlaidInfo(prev=>({...prev, error:'Unknown error'}));
     },
   });
 
@@ -127,14 +78,14 @@ const PlaidLinkButton = () => {
     );
   }
 
-  if (error) {
+  if (plaidInfo?.error) {
     return (
       <div className="text-red-600 mb-4 flex flex-col align-middle">
         An error occured please try again
         <Button
           variant='contained' 
           color='error'
-          onClick={() => setError(null)} 
+          onClick={() => setPlaidInfo(prev=>({...prev, error:null}))} 
           className="ml-2 text-blue-500 underline"
         >
           Try Again
@@ -145,19 +96,39 @@ const PlaidLinkButton = () => {
 
   return (
     <div className="flex items-center gap-2">
-      Connect with 
-    <Button 
-      onClick={() => open()} 
-      disabled={!ready || isLoading}
-      className={`${isLoading || !ready ? 'opacity-50 cursor-not-allowed' : ''}`}
-      sx={{background:"#000", borderRadius:"50px",color:"#fff", width:"15ch"}}
-    >
-      {isLoading ? 'Preparing...' : 
+     {plaidInfo?.plaidLimit
+     ?
+     <Box display={'flex'} flexDirection={'column'} alignItems={'center'}>
+      <Button 
+        disabled={!ready || plaidInfo?.loading}
+        className={`${plaidInfo?.loading || !ready ? 'opacity-50 cursor-not-allowed' : ''}`}
+        sx={{background:"#000", borderRadius:"50px",color:"#fff", width:"15ch"}}
+        >
+        {plaidInfo?.loading ? 'Preparing...' : 
 
-      <Typography fontSize={"14px"}>
-        <PlaidLogo />
-      </Typography>}
-    </Button>
+        <Typography fontSize={"14px"}>
+          <PlaidLogo />
+        </Typography>}
+      </Button>
+      <Typography textAlign={'center'} variant='caption' maxWidth={'20ch'}>You have reached your limit and can not add more accounts</Typography>
+     </Box>
+     : 
+     <>
+     Connect with 
+        <Button 
+        onClick={() => open()} 
+        disabled={!ready || plaidInfo?.loading}
+        className={`${plaidInfo?.loading || !ready ? 'opacity-50 cursor-not-allowed' : ''}`}
+        sx={{background:"#000", borderRadius:"50px",color:"#fff", width:"15ch"}}
+        >
+        {plaidInfo?.loading ? 'Preparing...' : 
+
+          <Typography fontSize={"14px"}>
+            <PlaidLogo />
+          </Typography>}
+        </Button>
+        </>
+    }
       </div>
   );
 };

@@ -1,7 +1,8 @@
-import { Box, Tab, Tabs } from "@mui/material";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { Box, Tab, Tabs, Typography } from "@mui/material";
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import FinancialGlossary from "./FinancialGlossary";
 import Ebook from "./Ebooks/Ebook";
+import { useSearchParams } from "react-router";
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -38,6 +39,17 @@ function Library() {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftFade, setShowLeftFade] = useState(false);
   const [showRightFade, setShowRightFade] = useState(false);
+  const [ searchParams, setSearchParams ] = useSearchParams()
+  const view = ['glossary', 'ebooks', 'reports']
+
+  useLayoutEffect(()=>{
+    if(view.includes(searchParams.get('view'))){
+      setValue(()=>view.indexOf(searchParams.get('view')))
+    }else{
+      setValue(()=>0)
+      setSearchParams(`view=${view[0]}`)
+    }
+  },[])
 
    // Check scroll position and update fade indicators
       const checkScrollPosition = () => {
@@ -76,6 +88,7 @@ function Library() {
   
   const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
         setValue(newValue);
+        setSearchParams(`view=${view[newValue]}`)
     };
     return(
       <>
@@ -114,7 +127,8 @@ function Library() {
                               }}
                           >
                               <Tab label="Glossary" {...a11yProps(0)} />
-                              <Tab label="Ebook" {...a11yProps(1)} />
+                              <Tab label="Ebooks" {...a11yProps(1)} />
+                              <Tab label="Reports" {...a11yProps(1)} />
                           </Tabs>
                       </div>
                       
@@ -129,6 +143,11 @@ function Library() {
                   </CustomTabPanel>
                   <CustomTabPanel value={value} index={1}>
                     <Ebook />
+                  </CustomTabPanel>
+                  <CustomTabPanel value={value} index={2}>
+                    <div>
+                      <Typography textAlign={'center'} variant="h4" fontWeight={'bold'}>Coming soon...</Typography>
+                    </div>
                   </CustomTabPanel>
       </>
     )

@@ -12,6 +12,11 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import { EmergencyFundsForm as FormType, EmergencySavingsAccount, EmergencyFundUsage, SafetyNet } from '../../types';
 import { generateId, calculateTotalSavings } from '../../utils/emergencyFund';
@@ -20,6 +25,7 @@ import FundCoverageSection from './emergency-form/FundCoverageSection';
 import emergencyFundService from '../../services/emergencyFund.service';
 import { UserContext } from '../../context/UserContext';
 import { useUser, useAuth } from '@clerk/clerk-react';
+import apiClient from '../../services/api-client';
 // Import other sections as they are created
 
 const EmergencyFunds = () => {
@@ -41,6 +47,14 @@ const EmergencyFunds = () => {
   const [isSavingCoverage, setIsSavingCoverage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Delete-specific states
+  const [isDeletingAccount, setIsDeletingAccount] = useState<string | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    open: boolean;
+    accountId: string;
+    accountName: string;
+  } | null>(null);
 
   // Original data from backend (for change tracking)
   const [originalData, setOriginalData] = useState<FormType | null>(null);
@@ -89,6 +103,7 @@ const EmergencyFunds = () => {
       const token = await getToken({ template: "noyack" });
       if (token) {
         emergencyFundService.setAuthToken(token);
+        apiClient.setAuthToken(token);
       }
       return token;
     } catch (error) {
@@ -214,12 +229,77 @@ const EmergencyFunds = () => {
     });
   };
 
-  // Handle removing an emergency savings account
+  // Handle removing an emergency savings account with immediate delete
   const removeSavingsAccount = (id: string) => {
-    setFormData({
-      ...formData,
-      savingsAccounts: formData.savingsAccounts.filter(account => account.id !== id)
-    });
+    const account = formData.savingsAccounts.find(acc => acc.id === id);
+    if (!account) return;
+
+    // Show confirmation dialog for existing accounts (not temp accounts)
+    if (!id.startsWith('temp-')) {
+      setDeleteConfirmation({
+        open: true,
+        accountId: id,
+        accountName: `${account.accountType} at ${account.institution || 'Unknown'}`
+      });
+    } else {
+      // For temporary accounts, just remove from state
+      setFormData({
+        ...formData,
+        savingsAccounts: formData.savingsAccounts.filter(account => account.id !== id)
+      });
+    }
+  };
+
+  // Handle confirmed deletion
+  const handleConfirmedDelete = async (accountId: string) => {
+    if (!userIdRef.current) {
+      setError('Unable to delete: missing user data');
+      return;
+    }
+
+    try {
+      setIsDeletingAccount(accountId);
+      setError(null);
+
+      // Get fresh auth token
+      await getAuthToken();
+
+      // Delete from backend immediately
+      const deleteResponse = await apiClient.delete(`/v1/emergency-savings-account/${accountId}`);
+
+      // Remove from local state
+      const updatedSavingsAccounts = formData.savingsAccounts.filter(account => account.id !== accountId);
+      
+      // Calculate new total from remaining accounts
+      const newTotal = calculateTotalSavings(updatedSavingsAccounts);
+      
+      // Update form data with new accounts and total
+      setFormData(prevData => ({
+        ...prevData,
+        savingsAccounts: updatedSavingsAccounts,
+        totalEmergencySavings: newTotal
+      }));
+
+      // Update original data as well to prevent change detection issues
+      setOriginalData(prevData => {
+        if (!prevData) return prevData;
+        const updatedOriginalAccounts = prevData.savingsAccounts.filter(account => account.id !== accountId);
+        return {
+          ...prevData,
+          savingsAccounts: updatedOriginalAccounts,
+          totalEmergencySavings: calculateTotalSavings(updatedOriginalAccounts)
+        };
+      });
+
+      setSuccessMessage('Account deleted successfully!');
+      setDeleteConfirmation(null);
+    } catch (error: unknown) {
+      console.error('Error deleting account:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete account';
+      setError(errorMessage);
+    } finally {
+      setIsDeletingAccount(null);
+    }
   };
 
   // Save current emergency savings section only
@@ -366,7 +446,7 @@ const EmergencyFunds = () => {
                 onClick={handleCancelSavingsEdit}
                 disabled={isSavingSavings}
               >
-                Cancel
+                Close
               </Button>
               <Button 
                 variant="contained" 
@@ -483,6 +563,48 @@ const EmergencyFunds = () => {
           </Box>
         )}
       </Box>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmation && (
+        <Dialog
+          open={deleteConfirmation.open}
+          onClose={() => setDeleteConfirmation(null)}
+          aria-labelledby="delete-account-dialog-title"
+        >
+          <DialogTitle id="delete-account-dialog-title">
+            Confirm Account Deletion
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to permanently delete "{deleteConfirmation.accountName}"? 
+              This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => setDeleteConfirmation(null)}
+              disabled={isDeletingAccount === deleteConfirmation.accountId}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => handleConfirmedDelete(deleteConfirmation.accountId)}
+              color="error"
+              variant="contained"
+              disabled={isDeletingAccount === deleteConfirmation.accountId}
+            >
+              {isDeletingAccount === deleteConfirmation.accountId ? (
+                <>
+                  <CircularProgress size={16} sx={{ mr: 1 }} />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Account'
+              )}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
       {/* Snackbar for success/error messages */}
       <Snackbar 

@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
+import { UserContext } from '../../context/UserContext';
+import hubspotService, { SupportTicketData } from '../../services/hubspot.service';
+import { useNavigate } from 'react-router';
+import { Divider, Typography } from '@mui/material';
 
 const supportCategories = [
   { 
@@ -82,8 +86,6 @@ const faqs = [
 
 const Support = () => {
   // Mock user ID - in your app you'd get this from your auth context
-  const mockUserId = 'user-12345';
-  
   const [formData, setFormData] = useState({
     category: '',
     subcategory: '',
@@ -95,6 +97,8 @@ const Support = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [expandedFaq, setExpandedFaq] = useState(null);
+  const { userInfo } = useContext(UserContext)
+  const navigate = useNavigate()
 
   const handleCategoryChange = (categoryId) => {
     setFormData({
@@ -104,55 +108,55 @@ const Support = () => {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // In your actual app, you'd check if user is authenticated
-    if (!mockUserId) {
-      setError('Please log in to submit a support request');
-      return;
-    }
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  setLoading(true);
+  setError('');
 
-    setLoading(true);
-    setError('');
-
-    const supportTicket = {
-      userId: mockUserId,
-      ...formData,
-      timestamp: new Date().toISOString(),
-      status: 'open'
-    };
-
-    try {
-      // Replace with your actual API call
-      const response = await fetch('/api/v1/support/tickets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        },
-        body: JSON.stringify(supportTicket)
-      });
-
-      if (response.ok) {
-        setSuccess(true);
-        setFormData({
-          category: '',
-          subcategory: '',
-          priority: 'medium',
-          subject: '',
-          description: ''
-        });
-      } else {
-        throw new Error('Failed to submit support request');
-      }
-    } catch (err) {
-      setError('Failed to submit your request. Please try again.');
-      console.error('Support submission error:', err);
-    } finally {
-      setLoading(false);
-    }
+  const supportTicket:SupportTicketData = {
+    userId: userInfo.hubspotContactId,
+    email: userInfo.email,
+    category: formData.category,
+    subcategory: formData.subcategory,
+    priority: formData.priority,
+    subject: formData.subject,
+    description: formData.description,
+    timestamp: new Date().toISOString(),
+    status: 'open' as const
   };
+
+  try {
+    // Use the HubSpot service to create the ticket
+    const response = await hubspotService.createSupportTicket(supportTicket);
+    if (response.success) {
+      setSuccess(true);
+      setFormData({
+        category: '',
+        subcategory: '',
+        priority: 'medium',
+        subject: '',
+        description: ''
+      });
+      window.scrollTo({
+        top: 100,
+        behavior: "smooth",
+      })
+      setTimeout(()=>{
+        navigate('/', {replace:true})
+      },1000)
+      
+      
+    } else {
+      throw new Error('Failed to submit support request');
+    }
+  } catch (err) {
+    setError(err.message || 'Failed to submit your request. Please try again.');
+    console.error('Support submission error:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const selectedCategory = supportCategories.find(cat => cat.id === formData.category);
 
@@ -168,61 +172,11 @@ const Support = () => {
         </p>
       </div>
 
-      {/* Quick Contact Info */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="text-4xl mb-2">📧</div>
-            <h3 className="text-lg font-semibold">Email Support</h3>
-            <p className="text-gray-600">support@noyack.com</p>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl mb-2">⏱️</div>
-            <h3 className="text-lg font-semibold">Response Time</h3>
-            <p className="text-gray-600">Within 24 hours</p>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl mb-2">📞</div>
-            <h3 className="text-lg font-semibold">Phone Support</h3>
-            <p className="text-gray-600">1-800-NOYACK</p>
-          </div>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Support Form */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-semibold mb-6">Submit a Support Request</h2>
-
-            {success && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 relative">
-                <span className="block sm:inline">Your support request has been submitted successfully! We'll get back to you within 24 hours.</span>
-                <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
-                  <button onClick={() => setSuccess(false)} className="text-green-500 hover:text-green-700">
-                    <svg className="fill-current h-6 w-6" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                      <title>Close</title>
-                      <path d="M14.348 14.849a1 1 0 01-1.414 0L10 11.414l-2.93 2.935a1 1 0 01-1.414-1.414l2.93-2.935-2.93-2.935a1 1 0 111.414-1.414L10 8.586l2.93-2.935a1 1 0 011.414 1.414L11.414 10l2.935 2.93a1 1 0 010 1.414z"/>
-                    </svg>
-                  </button>
-                </span>
-              </div>
-            )}
-
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 relative">
-                <span className="block sm:inline">{error}</span>
-                <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
-                  <button onClick={() => setError('')} className="text-red-500 hover:text-red-700">
-                    <svg className="fill-current h-6 w-6" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                      <title>Close</title>
-                      <path d="M14.348 14.849a1 1 0 01-1.414 0L10 11.414l-2.93 2.935a1 1 0 01-1.414-1.414l2.93-2.935-2.93-2.935a1 1 0 111.414-1.414L10 8.586l2.93-2.935a1 1 0 011.414 1.414L11.414 10l2.935 2.93a1 1 0 010 1.414z"/>
-                    </svg>
-                  </button>
-                </span>
-              </div>
-            )}
-
             <div onSubmit={handleSubmit} className="space-y-6">
               {/* Category Selection */}
               <div>
@@ -315,6 +269,34 @@ const Support = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 />
               </div>
+
+                  {success && (
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 relative">
+                <span className="block sm:inline">Your support request has been submitted successfully! We'll get back to you within 24 hours.</span>
+                <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
+                  <button onClick={() => setSuccess(false)} className="text-green-500 hover:text-green-700">
+                    <svg className="fill-current h-6 w-6" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <title>Close</title>
+                      <path d="M14.348 14.849a1 1 0 01-1.414 0L10 11.414l-2.93 2.935a1 1 0 01-1.414-1.414l2.93-2.935-2.93-2.935a1 1 0 111.414-1.414L10 8.586l2.93-2.935a1 1 0 011.414 1.414L11.414 10l2.935 2.93a1 1 0 010 1.414z"/>
+                    </svg>
+                  </button>
+                </span>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 relative">
+                <span className="block sm:inline">{error}</span>
+                <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
+                  <button onClick={() => setError('')} className="text-red-500 hover:text-red-700">
+                    <svg className="fill-current h-6 w-6" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <title>Close</title>
+                      <path d="M14.348 14.849a1 1 0 01-1.414 0L10 11.414l-2.93 2.935a1 1 0 01-1.414-1.414l2.93-2.935-2.93-2.935a1 1 0 111.414-1.414L10 8.586l2.93-2.935a1 1 0 011.414 1.414L11.414 10l2.935 2.93a1 1 0 010 1.414z"/>
+                    </svg>
+                  </button>
+                </span>
+              </div>
+            )}
 
               {/* Submit Button */}
               <button

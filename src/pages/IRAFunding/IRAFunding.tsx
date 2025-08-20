@@ -740,7 +740,6 @@ const IRATransferForm: React.FC = () => {
               size="large"
               onClick={() => {
                 // Navigate to investments dashboard
-                console.log('Navigate to investments');
               }}
             >
               Review More Investments

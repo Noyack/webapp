@@ -38,6 +38,8 @@ export interface UserInfo {
   hasCompletedOnboarding: boolean;
   onboarding: boolean;
   plaidUserToken?: string;
+  hubspotContactId?:string;
+  hasHubSpotContact: boolean
   imageUrl: string;
 }
 
@@ -194,6 +196,15 @@ export interface FeatureGate {
     plans: ["investor"]
   }
 ];
+
+export interface PlaidInfo{
+  accountCount: number;
+  noAccount: boolean;
+  linkToken: string;
+  plaidLimit: boolean;
+  error: string;
+  loading: boolean;
+}
 
 export interface ClerkEmailObject {
   id: string;
@@ -1608,7 +1619,9 @@ export type TransactionItem =  {
   }
   
   export type p_u_link = {
+    status: number;
     link_token: string;
+    noAccount: boolean;
   }
   
   export type tokenExchangeMetaData = {
@@ -1766,4 +1779,15 @@ export interface StepProps {
   setInvestmentPrefs: (investmentPrefs: InvestmentPreferences) => void;
   optimizationResults: OptimizationResults;
   taxImplications: TaxImplications;
+}
+
+export interface WealthIq {
+  id: string;
+  userId: string;
+  category: string;
+  rawScore: number;
+  iq: number;
+  recommendations: string[];
+  quiz: any;
+  createdAt: string; // ISO date string
 }

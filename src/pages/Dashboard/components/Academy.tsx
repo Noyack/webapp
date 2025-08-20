@@ -135,7 +135,7 @@ const Academy = ({ events, referralCode, fetching }: CommunityProps = {}) => {
           </div>
         </Box>
         
-	<UpcomingEvents />
+	{/* <UpcomingEvents /> */}
       </div>
       
       {/* <Box 

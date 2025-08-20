@@ -101,7 +101,22 @@ export class AuthService {
     const response = await apiClient.patch<User>(`users/${userId}/onboarding`, onboardingData);
     return response.data;
   }
+  
+  async completeQuiz(data: unknown): Promise<any> {
+    const response = await apiClient.post<any>(`users/wealthiq`, data);
+    return response.data;
+  }
+  async submitWealthIQ(wealthIQData: any): Promise<any> {
+    const response = await apiClient.post<any>('users/wealthiq', wealthIQData);
+    return response.data;
+  }
+  async getWealthIQ(): Promise<any> {
+    const response = await apiClient.post<any>('users/wealthiq/getAll');
+    return response.data;
+  }
 }
+  
+
 
 // Create a singleton instance
 export const authService = new AuthService();

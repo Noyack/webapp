@@ -38,7 +38,7 @@ function WealthStatus(wealth:any) {
         Wealth Status
       </Typography>
         <BoxCard height={20} width={100}>
-      <div className="flex gap-5 px-5 w-full justify-evenly">
+      <div className="flex flex-wrap gap-5 px-5 w-full justify-evenly">
             {wealthMap.map((x,i)=>(
                 <div key={i} className="flex flex-col gap-3 items-center">
                 <Typography fontWeight={"bold"}>{x.title}</Typography>

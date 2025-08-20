@@ -42,7 +42,7 @@ const PrimaryIncomeForm: React.FC<PrimaryIncomeFormProps> = ({
             label="Annual Gross Salary/Income"
             type="number"
             name="salary"
-            value={primaryIncome.salary}
+            value={primaryIncome.salary===0?"":primaryIncome.salary}
             onChange={onTextChange}
             InputProps={{ 
               inputProps: { min: 0 },
@@ -141,7 +141,6 @@ const PrimaryIncomeForm: React.FC<PrimaryIncomeFormProps> = ({
             label="Average Annual Bonus/Commission Amount"
             type="number"
             name="averageBonus"
-            value={primaryIncome.averageBonus}
             onChange={onTextChange}
             InputProps={{ 
               inputProps: { min: 0 },

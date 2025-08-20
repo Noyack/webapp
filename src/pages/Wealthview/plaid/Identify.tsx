@@ -9,10 +9,12 @@ import {
   CircularProgress,
   Chip
 } from '@mui/material';
+import { PlaidContext } from '../../../context/PlaidContext';
 
 
 const UserIdentityInfo = () => {
   const {userInfo} = useContext(UserContext)
+  const {plaidInfo} = useContext(PlaidContext)
   const [identityData, setIdentityData] = useState<IdentityData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ const UserIdentityInfo = () => {
       }
     };
 
-    if (userInfo?.id) {
+    if (userInfo?.id && !plaidInfo?.noAccount) {
       fetchIdentityData();
     }
   }, [userInfo]);
